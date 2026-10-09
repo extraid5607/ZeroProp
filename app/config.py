@@ -32,7 +32,18 @@ def _list(name: str, default: str) -> tuple[str, ...]:
 
 
 def _database_url() -> str:
-    url = os.getenv("DATABASE_URL", "sqlite:///./zeropaper.db")
+    raw = os.getenv("DATABASE_URL")
+    if not raw or not raw.strip():
+        return "sqlite:///./zeropaper.db"
+
+    url = raw.strip().strip("'\"")
+    if "psql " in url:
+        url = url.split("psql ", 1)[-1].strip().strip("'\"")
+
+    # If the user mistakenly pasted just a Service ID (e.g. dpg-xxx) or non-URL text
+    if "://" not in url:
+        return "sqlite:///./zeropaper.db"
+
     # Render / Heroku hand out "postgres://..." which SQLAlchemy does not accept.
     if url.startswith("postgres://"):
         url = "postgresql+psycopg://" + url[len("postgres://"):]
