@@ -2,7 +2,7 @@
 import { api } from '../api.js';
 import { h, mount, money, pct, toast } from '../util.js';
 import { store, setAccount, emit, stayQuiet } from '../store.js';
-import { confirmDialog } from '../dialogs.js';
+import { openUpgradeDialog } from '../dialogs.js';
 
 const BEGINNER = { require_sl: true, max_leverage: 5, max_risk_pct: 1, daily_loss_pct: 3 };
 
@@ -43,26 +43,6 @@ export function renderRules(root) {
   }
   saveBtn.addEventListener('click', save);
 
-  async function resetAccount() {
-    const ok = await confirmDialog({
-      title: 'Reset your account?',
-      body: `This closes every open position at the current price, cancels pending orders, and starts season ${user.season + 1} with ${money(user.start_balance, { decimals: 0 })}. Your journal, stats and leaderboard rank only count the new season.`,
-      confirmLabel: 'Reset account', danger: true,
-    });
-    if (!ok) return;
-    try {
-      stayQuiet();
-      const r = await api('/api/account/reset', { method: 'POST', body: { confirm: true } });
-      store.me.user = r.user;
-      setAccount(r.account);
-      emit('closed', []);
-      toast(`Season ${r.user.season} started with ${money(r.user.start_balance, { decimals: 0 })}.`, 'ok');
-      renderRules(root);
-    } catch (e) {
-      toast(e.message, 'error');
-    }
-  }
-
   // fees and leverage, read from the live market catalogue
   const classes = [['crypto', 'Crypto'], ['metal', 'Commodities (Gold, Silver, Oil)'], ['forex', 'Forex']].map(([cls, label]) => {
     const m = store.markets.find((x) => x.cls === cls);
@@ -86,11 +66,17 @@ export function renderRules(root) {
           err,
           h('div', { class: 'rules-actions' }, saveBtn,
             h('button', { type: 'button', class: 'btn', on: { click: () => fill(BEGINNER) } }, 'Fill in beginner rules'))),
-        h('section', { class: 'panel panel-pad form-grid danger-zone' },
-          h('h2', null, 'Account'),
-          h('p', null, `Season ${user.season}. You started with ${money(user.start_balance, { decimals: 0 })}.`),
-          h('p', { class: 'fine' }, 'Blown the account, or want a clean start? Resetting keeps your username.'),
-          h('div', { class: 'rules-actions' }, h('button', { type: 'button', class: 'btn danger', on: { click: resetAccount } }, 'Reset account')))),
+        h('section', { class: 'panel panel-pad form-grid' },
+          h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+            h('h2', { style: { margin: 0 } }, 'Evaluation Plan'),
+            h('span', { class: 'badge accent' }, user.plan_name && user.plan_name !== 'free' ? `${money(user.start_balance, { decimals: 0 })} Active` : 'Free Practice ($2,000)')),
+          h('p', null, `Season ${user.season}. Starting balance: ${money(user.start_balance, { decimals: 0 })}.`),
+          h('p', { class: 'fine' }, 'Upgrade to a funded evaluation plan ($10,000, $15,000 or $25,000) with verified live trading limits.'),
+          h('div', { class: 'rules-actions' },
+            h('button', {
+              type: 'button', class: 'btn primary',
+              on: { click: () => openUpgradeDialog() }
+            }, 'Upgrade Account / Plans')))),
       h('section', { class: 'panel panel-pad form-grid' },
         h('h2', null, 'How the simulation works'),
         h('ul', { class: 'explain' },

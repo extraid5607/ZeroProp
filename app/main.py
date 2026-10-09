@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -16,12 +17,22 @@ from sqlalchemy.orm import Session
 
 from . import auth
 from .config import settings
-from .db import SessionLocal, Snapshot, Trade, User, init_db
+from .db import Payment, SessionLocal, Snapshot, Trade, User, init_db
 from .engine import LOCK, Engine, TradeError, today_utc
 from .markets import MARKET_LIST, MARKETS, floor_to_step
 from .prices import TF_SECONDS, PriceHub
 from .risk import preview_position, size_position
-from .schemas import Credentials, JournalReq, OrderReq, ResetReq, SettingsReq, StopsReq
+from .schemas import (
+    AdminReviewReq,
+    Credentials,
+    JournalReq,
+    MakeAdminReq,
+    OrderReq,
+    PaymentSubmitReq,
+    ResetReq,
+    SettingsReq,
+    StopsReq,
+)
 from .stats import compute_stats
 
 log = logging.getLogger("zeropaper")
@@ -139,11 +150,27 @@ def current_user(user: User | None = Depends(optional_user)) -> User:
 
 
 def _user_view(u: User) -> dict:
+    is_adm = bool(u.is_admin or (u.username and u.username.lower() == settings.admin_user.lower()))
     return {
-        "username": u.username, "season": u.season, "start_balance": u.start_balance,
-        "settings": {"require_sl": u.require_sl, "max_leverage": u.max_leverage,
-                     "max_risk_pct": u.max_risk_pct, "daily_loss_pct": u.daily_loss_pct},
+        "username": u.username,
+        "season": u.season,
+        "start_balance": u.start_balance,
+        "plan_name": u.plan_name or "free",
+        "plan_expires_at": u.plan_expires_at,
+        "is_admin": is_adm,
+        "settings": {
+            "require_sl": u.require_sl,
+            "max_leverage": u.max_leverage,
+            "max_risk_pct": u.max_risk_pct,
+            "daily_loss_pct": u.daily_loss_pct,
+        },
     }
+
+
+def admin_user(user: User = Depends(current_user)) -> User:
+    if not (user.is_admin or (user.username and user.username.lower() == settings.admin_user.lower())):
+        raise HTTPException(403, "Admin privileges required.")
+    return user
 
 
 def _set_cookie(response: Response, token: str) -> None:
@@ -362,12 +389,245 @@ def update_settings(body: SettingsReq, user: User = Depends(current_user),
 
 
 @app.post("/api/account/reset")
-def reset_account(body: ResetReq, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    if not body.confirm:
-        raise HTTPException(400, "Confirm the reset.")
+def reset_account(_body: ResetReq, _user: User = Depends(current_user), _db: Session = Depends(get_db)):
+    # Free account resets are removed as requested. Traders upgrade evaluation plans to restart.
+    raise HTTPException(403, "Free account resets are disabled. Upgrade your evaluation plan to restart.")
+
+
+# ----------------------------------------------------------------------- monetization & plans
+PLANS = {
+    "10k": {
+        "id": "10k",
+        "title": "$10,000 Evaluation",
+        "balance": 10000.0,
+        "amount_inr": 199,
+        "duration_days": 30,
+        "badge": "Popular",
+        "features": [
+            "$10,000 Practice Evaluation Capital",
+            "30 Days Account Validity",
+            "Real-Time Live Market Feeds",
+            "Full Journal & Analytics Access",
+            "Verified Trader Leaderboard Ranking",
+        ],
+    },
+    "15k": {
+        "id": "15k",
+        "title": "$15,000 Evaluation",
+        "balance": 15000.0,
+        "amount_inr": 499,
+        "duration_days": 90,
+        "badge": "Best Value",
+        "features": [
+            "$15,000 Practice Evaluation Capital",
+            "90 Days Account Validity (3 Months)",
+            "Real-Time Live Market Feeds",
+            "Unlimited Trades & Position Sizing",
+            "Full Journal & Analytics Access",
+        ],
+    },
+    "25k": {
+        "id": "25k",
+        "title": "$25,000 Evaluation",
+        "balance": 25000.0,
+        "amount_inr": 799,
+        "duration_days": 180,
+        "badge": "Pro Trader",
+        "features": [
+            "$25,000 Practice Evaluation Capital",
+            "180 Days Account Validity (6 Months)",
+            "Maximum Capital Allocation",
+            "Real-Time Live Market Feeds",
+            "Priority Verification & Support",
+        ],
+    },
+}
+
+
+@app.get("/api/plans")
+def list_plans(user: User | None = Depends(optional_user), db: Session = Depends(get_db)):
+    pending_payment = None
+    if user:
+        pending = db.scalar(
+            select(Payment)
+            .where(Payment.user_id == user.id, Payment.status == "pending")
+            .order_by(Payment.created_at.desc())
+            .limit(1)
+        )
+        if pending:
+            pending_payment = {
+                "id": pending.id,
+                "plan_id": pending.plan_id,
+                "plan_title": pending.plan_title,
+                "amount_inr": pending.amount_inr,
+                "utr": pending.utr,
+                "status": pending.status,
+                "created_at": pending.created_at,
+            }
+    return {
+        "plans": list(PLANS.values()),
+        "upi_id": settings.upi_id,
+        "current_plan": user.plan_name if user else "free",
+        "pending_payment": pending_payment,
+    }
+
+
+@app.post("/api/payments/submit")
+def submit_payment(body: PaymentSubmitReq, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    plan = PLANS.get(body.plan_id)
+    if not plan:
+        raise HTTPException(400, "Invalid plan selected.")
+
+    utr = body.utr.strip()
+    # Anti-fraud: exact 12-digit numeric UPI UTR / RRN validation
+    if not re.fullmatch(r"^[0-9]{12}$", utr):
+        raise HTTPException(
+            400, "Invalid UTR / Reference ID. Must be exactly 12 numeric digits from your UPI transaction receipt."
+        )
+
+    # Anti-fraud: prevent reuse of previously used or pending UTRs
+    existing = db.scalar(select(Payment).where(Payment.utr == utr))
+    if existing:
+        raise HTTPException(
+            400, "This 12-digit UTR has already been submitted. Each UPI transaction ID can only be claimed once."
+        )
+
+    # Anti-fraud: limit one pending submission at a time per user
+    pending = db.scalar(select(Payment).where(Payment.user_id == user.id, Payment.status == "pending"))
+    if pending:
+        raise HTTPException(
+            400, "You already have a payment request under verification. Please wait for admin approval."
+        )
+
+    p = Payment(
+        user_id=user.id,
+        plan_id=plan["id"],
+        plan_title=plan["title"],
+        balance=plan["balance"],
+        amount_inr=plan["amount_inr"],
+        duration_days=plan["duration_days"],
+        upi_id=settings.upi_id,
+        utr=utr,
+        proof_image=body.proof_image,
+        status="pending",
+        created_at=time.time(),
+    )
+    db.add(p)
+    db.commit()
+    return {
+        "ok": True,
+        "payment_id": p.id,
+        "plan": plan["title"],
+        "status": "pending",
+        "message": (
+            "Payment submitted successfully! Your payment is under admin verification. "
+            "Your account will be upgraded immediately once verified."
+        ),
+    }
+
+
+# ----------------------------------------------------------------------- admin panel
+@app.get("/api/admin/payments")
+def admin_list_payments(
+    status: str | None = None,
+    _adm: User = Depends(admin_user),
+    db: Session = Depends(get_db),
+):
+    stmt = select(Payment, User.username).join(User, Payment.user_id == User.id)
+    if status:
+        stmt = stmt.where(Payment.status == status)
+    stmt = stmt.order_by(Payment.created_at.desc())
+    rows = db.execute(stmt).all()
+    out = []
+    for p, uname in rows:
+        out.append({
+            "id": p.id,
+            "user_id": p.user_id,
+            "username": uname,
+            "plan_id": p.plan_id,
+            "plan_title": p.plan_title,
+            "balance": p.balance,
+            "amount_inr": p.amount_inr,
+            "duration_days": p.duration_days,
+            "upi_id": p.upi_id,
+            "utr": p.utr,
+            "has_proof": bool(p.proof_image),
+            "proof_image": p.proof_image,
+            "status": p.status,
+            "created_at": p.created_at,
+            "reviewed_at": p.reviewed_at,
+            "reviewer_note": p.reviewer_note,
+        })
+    return {"payments": out}
+
+
+@app.post("/api/admin/payments/{payment_id}/approve")
+def admin_approve_payment(
+    payment_id: int,
+    body: AdminReviewReq,
+    _adm: User = Depends(admin_user),
+    db: Session = Depends(get_db),
+):
     with LOCK:
-        engine.reset_account(db, user)
-        return {"user": _user_view(user), "account": engine.state(db, user)}
+        p = db.get(Payment, payment_id)
+        if not p:
+            raise HTTPException(404, "Payment record not found.")
+        if p.status != "pending":
+            raise HTTPException(400, f"Cannot approve payment with status '{p.status}'.")
+
+        target_user = db.get(User, p.user_id)
+        if not target_user:
+            raise HTTPException(404, "User account not found.")
+
+        # Upgrade user capital & plan
+        target_user.start_balance = p.balance
+        target_user.plan_name = p.plan_id
+        target_user.plan_expires_at = time.time() + (p.duration_days * 86400)
+
+        # Fresh evaluation season with new funded balance
+        engine.reset_account(db, target_user)
+
+        p.status = "approved"
+        p.reviewed_at = time.time()
+        p.reviewer_note = body.note.strip() or "Verified and approved by admin."
+        db.commit()
+
+        return {
+            "ok": True,
+            "message": f"Approved {target_user.username} for {p.plan_title}.",
+            "user": _user_view(target_user),
+        }
+
+
+@app.post("/api/admin/payments/{payment_id}/reject")
+def admin_reject_payment(
+    payment_id: int,
+    body: AdminReviewReq,
+    _adm: User = Depends(admin_user),
+    db: Session = Depends(get_db),
+):
+    with LOCK:
+        p = db.get(Payment, payment_id)
+        if not p:
+            raise HTTPException(404, "Payment record not found.")
+        if p.status != "pending":
+            raise HTTPException(400, f"Cannot reject payment with status '{p.status}'.")
+
+        p.status = "rejected"
+        p.reviewed_at = time.time()
+        p.reviewer_note = body.note.strip() or "Rejected by admin: payment not received or invalid UTR."
+        db.commit()
+
+        return {"ok": True, "message": f"Payment #{payment_id} rejected."}
+
+
+@app.post("/api/admin/make-admin")
+def make_admin(body: MakeAdminReq, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    if body.admin_key.strip() != settings.admin_key:
+        raise HTTPException(403, "Invalid admin key.")
+    user.is_admin = True
+    db.commit()
+    return {"ok": True, "user": _user_view(user)}
 
 
 @app.get("/api/leaderboard")

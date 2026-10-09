@@ -25,7 +25,7 @@ export function renderLeaderboard(root) {
 
   function paint(r) {
     const min = r.min_trades;
-    note.textContent = `Ranked by return on your practice account. You appear after ${min} closed trade${min === 1 ? '' : 's'}. Resetting your account starts you again from zero.`;
+    note.textContent = `Ranked by return on your evaluation account. You appear after ${min} closed trade${min === 1 ? '' : 's'}.`;
     if (!r.rows.length) {
       mount(body, h('div', { class: 'panel empty' }, h('strong', null, 'Nobody is ranked yet'),
         `Close ${min} trade${min === 1 ? '' : 's'} to be the first name on the board.`));

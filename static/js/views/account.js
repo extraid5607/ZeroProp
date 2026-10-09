@@ -2,12 +2,22 @@
 import { api } from '../api.js';
 import { h, mount, money, pct, tone, arrow, toast, storage } from '../util.js';
 import { store, on, setAccount, refreshAccount } from '../store.js';
-import { confirmDialog, openInstallDialog } from '../dialogs.js';
+import { openUpgradeDialog, openInstallDialog } from '../dialogs.js';
 
 export function renderAccount(root) {
   const unsub = [];
 
   const bodyEl = h('div', { class: 'account-body' });
+  let pendingPayment = null;
+
+  async function loadPending() {
+    try {
+      const data = await api('/api/plans');
+      pendingPayment = data.pending_payment;
+      renderContent();
+    } catch (_) {}
+  }
+  loadPending();
 
   function renderContent() {
     const user = store.me?.user;
@@ -23,26 +33,6 @@ export function renderAccount(root) {
     const unrealized = a ? a.unrealized : 0;
     const posCount = a && a.positions ? a.positions.length : 0;
     const locked = a && a.locked;
-
-    // Reset account handler
-    async function handleReset() {
-      const ok = await confirmDialog({
-        title: 'Reset account to $10,000?',
-        body: `Season ${user.season} will end. All open positions will be closed, pending orders cancelled, and your equity reset to ${money(user.start_balance, { decimals: 0 })}.`,
-        confirmLabel: 'Reset account',
-        danger: true,
-      });
-      if (!ok) return;
-      try {
-        const r = await api('/api/account/reset', { method: 'POST', body: { confirm: true } });
-        store.me.user = r.user;
-        setAccount(r.account);
-        toast(`Season ${r.user.season} started with ${money(r.user.start_balance, { decimals: 0 })}.`, 'ok');
-        renderContent();
-      } catch (e) {
-        toast(e.message, 'error');
-      }
-    }
 
     async function handleLogout() {
       try { await api('/api/auth/logout', { method: 'POST' }); } catch (_) {}
@@ -60,16 +50,54 @@ export function renderAccount(root) {
       renderContent();
     }
 
+    const planLabel = user.plan_name && user.plan_name !== 'free'
+      ? `${money(user.start_balance, { decimals: 0 })} Evaluation`
+      : 'Free Practice ($2,000)';
+
     mount(bodyEl,
       // User Profile Hero
       h('div', { class: 'panel account-hero' },
         h('div', { class: 'account-avatar' }, user.username.slice(0, 2).toUpperCase()),
         h('div', { class: 'account-user-meta' },
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } },
             h('h2', { style: { margin: 0, fontSize: '20px' } }, user.username),
-            h('span', { class: 'badge accent' }, `Season ${user.season}`),
+            h('span', { class: 'badge accent' }, planLabel),
+            h('span', { class: 'badge' }, `Season ${user.season}`),
+            user.is_admin ? h('a', { href: '#/admin', class: 'badge', style: { background: 'var(--accent)', color: '#fff', textDecoration: 'none' } }, 'Admin Portal') : null,
             locked ? h('span', { class: 'badge warn' }, 'Locked (Daily Limit)') : null),
-          h('p', { class: 'muted', style: { margin: '4px 0 0' } }, `Starting balance: ${money(user.start_balance, { decimals: 0 })} · Evaluation account`))),
+          h('p', { class: 'muted', style: { margin: '4px 0 0' } }, `Starting balance: ${money(user.start_balance, { decimals: 0 })} · Simulated execution`))),
+
+      // Evaluation Plan & Funded Capital Card
+      h('section', { class: 'panel panel-pad form-grid' },
+        h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' } },
+          h('div', null,
+            h('h2', { style: { margin: 0 } }, 'Evaluation Capital & Plan'),
+            h('p', { class: 'muted', style: { margin: '4px 0 0', fontSize: '13px' } },
+              user.plan_expires_at
+                ? `Active plan valid until ${new Date(user.plan_expires_at * 1000).toLocaleDateString()}`
+                : 'Free practice plan ($2,000). Upgrade for larger funded capital & verified status.')),
+          h('button', {
+            type: 'button', class: 'btn primary',
+            on: { click: () => openUpgradeDialog() },
+          }, 'Upgrade Account / Plans')),
+
+        pendingPayment ? h('div', {
+          style: {
+            background: 'rgba(234, 179, 8, 0.12)',
+            border: '1px solid rgba(234, 179, 8, 0.4)',
+            borderRadius: 'var(--radius)',
+            padding: '12px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+          },
+        },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+            h('span', { class: 'badge warn' }, 'Verification Pending'),
+            h('strong', null, pendingPayment.plan_title)),
+          h('p', { style: { margin: 0, fontSize: '13px', color: 'var(--muted)' } },
+            `UTR / Ref No: `, h('code', { style: { background: 'var(--bg-card)', padding: '2px 6px', borderRadius: '4px' } }, pendingPayment.utr),
+            ` · Amount: ₹${pendingPayment.amount_inr} INR. Your account will be upgraded immediately once verified by admin.`)) : null),
 
       // Financials Summary Grid
       h('div', { class: 'account-kpi-grid' },
@@ -122,10 +150,9 @@ export function renderAccount(root) {
             type: 'button', class: 'btn',
             on: { click: toggleTheme },
           }, `Switch to ${isDark ? 'Light' : 'Dark'} theme`),
-          h('button', {
-            type: 'button', class: 'btn danger',
-            on: { click: handleReset },
-          }, 'Reset account (fresh season)'),
+          user.is_admin ? h('a', {
+            href: '#/admin', class: 'btn', style: { textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+          }, 'Admin Portal (Payment Verifications)') : null,
           h('button', {
             type: 'button', class: 'btn ghost',
             on: { click: handleLogout },

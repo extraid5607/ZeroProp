@@ -11,6 +11,7 @@ import { renderWatchlist } from './views/watchlist.js';
 import { renderJournalStats } from './views/journal_stats.js';
 import { renderRulesRanks } from './views/rules_ranks.js';
 import { renderAccount } from './views/account.js';
+import { renderAdmin } from './views/admin.js';
 import { openInstallDialog } from './dialogs.js';
 
 const ROUTES = [
@@ -19,6 +20,7 @@ const ROUTES = [
   ['journal', 'Journal', renderJournalStats],
   ['rules', 'Rules', renderRulesRanks],
   ['account', 'Account', renderAccount],
+  ['admin', 'Admin', renderAdmin],
 ];
 const ROUTE_TITLES = {
   trade: 'Trade',
@@ -29,6 +31,7 @@ const ROUTE_TITLES = {
   ranks: 'Leaderboard',
   leaderboard: 'Leaderboard',
   account: 'Account',
+  admin: 'Admin Portal',
 };
 const ROUTE_ICONS = {
   trade: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-6 4 4 6-9"/></svg>',
@@ -36,6 +39,7 @@ const ROUTE_ICONS = {
   journal: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>',
   rules: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
   account: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  admin: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.93V17a1 1 0 0 1-2 0v-.07A7.003 7.003 0 0 1 5.07 11H5a1 1 0 0 1 0-2h.07A7.003 7.003 0 0 1 11 3.07V3a1 1 0 0 1 2 0v.07A7.003 7.003 0 0 1 18.93 9H19a1 1 0 0 1 0 2h-.07A7.003 7.003 0 0 1 13 16.93z"/></svg>',
 };
 
 const root = document.getElementById('app');
@@ -104,7 +108,8 @@ function drawAccount() {
 }
 
 function drawNav(active) {
-  mount(shell.nav, ROUTES.map(([id, label]) => {
+  const visible = ROUTES.filter(([id]) => id !== 'admin' || (store.me?.user?.is_admin));
+  mount(shell.nav, visible.map(([id, label]) => {
     const a = h('a', {
       href: `#/${id}`, 'aria-current': id === active ? 'page' : null, class: 'nav-link',
     });

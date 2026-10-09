@@ -56,6 +56,11 @@ class User(Base):
     day_start_equity: Mapped[float] = mapped_column(Float)
     day_start_date: Mapped[str] = mapped_column(String(10), default="")
 
+    # Evaluation Plan & Admin
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    plan_name: Mapped[str] = mapped_column(String(20), default="free")  # "free", "10k", "15k", "25k"
+    plan_expires_at: Mapped[float | None] = mapped_column(Float, nullable=True)
+
 
 class AuthSession(Base):
     __tablename__ = "auth_sessions"
@@ -147,5 +152,36 @@ class Snapshot(Base):
     __table_args__ = (Index("ix_snap_user_ts", "user_id", "season", "ts"),)
 
 
+class Payment(Base):
+    """UPI payment requests submitted by users for funded evaluation plans."""
+    __tablename__ = "payments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    plan_id: Mapped[str] = mapped_column(String(20))          # "10k", "15k", "25k"
+    plan_title: Mapped[str] = mapped_column(String(50))
+    balance: Mapped[float] = mapped_column(Float)
+    amount_inr: Mapped[int] = mapped_column(Integer)
+    duration_days: Mapped[int] = mapped_column(Integer)
+    upi_id: Mapped[str] = mapped_column(String(64), default="Harjinder1070-2@okaxis")
+    utr: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    proof_image: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)  # pending | approved | rejected
+    created_at: Mapped[float] = mapped_column(Float)
+    reviewed_at: Mapped[float | None] = mapped_column(Float, nullable=True)
+    reviewer_note: Mapped[str] = mapped_column(String(200), default="")
+
+
 def init_db() -> None:
     Base.metadata.create_all(engine)
+    # Safe column additions for existing databases (SQLite / Postgres)
+    with engine.begin() as conn:
+        for col, col_type in [
+            ("is_admin", "BOOLEAN DEFAULT FALSE"),
+            ("plan_name", "VARCHAR(20) DEFAULT 'free'"),
+            ("plan_expires_at", "FLOAT"),
+        ]:
+            try:
+                conn.exec_driver_sql(f"ALTER TABLE users ADD COLUMN {col} {col_type}")
+            except Exception:
+                pass  # column already exists or driver handled it

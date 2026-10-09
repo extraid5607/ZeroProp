@@ -53,3 +53,18 @@ class SettingsReq(BaseModel):
 
 class ResetReq(BaseModel):
     confirm: bool = False
+
+
+class PaymentSubmitReq(BaseModel):
+    plan_id: Literal["10k", "15k", "25k"]
+    utr: Annotated[str, Field(min_length=12, max_length=12)]
+    proof_image: str | None = Field(None, max_length=1_500_000)
+
+
+class AdminReviewReq(BaseModel):
+    note: str = Field("", max_length=200)
+
+
+class MakeAdminReq(BaseModel):
+    admin_key: str = Field(max_length=100)
+

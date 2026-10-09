@@ -73,6 +73,10 @@ class Settings:
     default_max_leverage: int
     default_max_risk_pct: float
     default_daily_loss_pct: float
+    # Monetization & UPI settings
+    upi_id: str
+    admin_user: str
+    admin_key: str
 
 
 def load_settings() -> Settings:
@@ -82,7 +86,7 @@ def load_settings() -> Settings:
         price_source=os.getenv("PRICE_SOURCE", "live").strip().lower(),
         crypto_venues=_list("CRYPTO_VENUES", "binance,bybit,okx,kucoin"),
         metal_venues=_list("METAL_VENUES", "binanceusdm"),
-        start_balance=_float("START_BALANCE", 10_000.0),
+        start_balance=_float("START_BALANCE", 2_000.0),
         cookie_secure=_bool("COOKIE_SECURE", False),
         session_days=_int("SESSION_DAYS", 30),
         min_trades_leaderboard=_int("MIN_TRADES_LEADERBOARD", 5),
@@ -91,6 +95,9 @@ def load_settings() -> Settings:
         default_max_leverage=_int("DEFAULT_MAX_LEVERAGE", 20),
         default_max_risk_pct=_float("DEFAULT_MAX_RISK_PCT", 5.0),
         default_daily_loss_pct=_float("DEFAULT_DAILY_LOSS_PCT", 10.0),
+        upi_id=os.getenv("UPI_ID", "Harjinder1070-2@okaxis").strip(),
+        admin_user=os.getenv("ADMIN_USER", "admin").strip().lower(),
+        admin_key=os.getenv("ADMIN_KEY", "zeroprop_admin_2026").strip(),
     )
 
 
