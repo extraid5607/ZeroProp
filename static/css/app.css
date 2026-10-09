@@ -953,6 +953,279 @@ dialog::backdrop { background: rgba(8, 14, 28, .55); }
   gap: 10px;
 }
 
+/* ------------------------------------------------------------------ Dedicated Position Cards */
+.pos-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 10px;
+}
+.pos-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel, 12px);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.pos-card:hover {
+  border-color: var(--line-strong, var(--ink-3));
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+.pos-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.pos-market {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.pos-sym-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pos-sym {
+  font-size: 16.5px;
+  font-weight: 750;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.pos-meta-line {
+  font-size: 12px;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.pos-meta-sep {
+  opacity: 0.4;
+}
+
+/* Hero Unrealized P&L banner */
+.pos-pnl-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.pos-pnl-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+}
+.pos-pnl-num {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.pos-pnl-hero.up .pos-pnl-num { color: var(--up); }
+.pos-pnl-hero.down .pos-pnl-num { color: var(--down); }
+.pos-pnl-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.pos-pnl-hero.up .pos-pnl-pct { color: var(--up); }
+.pos-pnl-hero.down .pos-pnl-pct { color: var(--down); }
+.pos-r-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* Key Metrics Grid */
+.pos-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+@media (max-width: 1080px) {
+  .pos-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 620px) {
+  .pos-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+
+.pos-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+.pos-tile-lbl {
+  font-size: 10.5px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pos-val {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Prominently Highlighted Stop-Loss (SL) */
+.pos-tile-sl {
+  background: rgba(239, 68, 68, 0.07);
+  border-color: rgba(239, 68, 68, 0.28);
+}
+.pos-tile-sl .pos-tile-lbl {
+  color: var(--down, #ef4444);
+}
+
+/* Prominently Highlighted Target / Take-Profit (TP) */
+.pos-tile-tp {
+  background: rgba(16, 185, 129, 0.07);
+  border-color: rgba(16, 185, 129, 0.28);
+}
+.pos-tile-tp .pos-tile-lbl {
+  color: var(--up, #10b981);
+}
+
+.pos-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  min-width: 0;
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+.pos-pill:hover {
+  transform: translateY(-0.5px);
+  filter: brightness(1.1);
+}
+.pos-pill:active {
+  transform: translateY(0);
+}
+.pos-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-red {
+  background: var(--down, #ef4444);
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+.dot-green {
+  background: var(--up, #10b981);
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+.pos-pill-sl.set .pos-pill-text {
+  font-size: 14.5px;
+  font-weight: 750;
+  color: var(--down, #ef4444);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pos-pill-sl.unset .pos-pill-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warn, #f59e0b);
+  font-style: italic;
+  white-space: nowrap;
+}
+.pos-pill-tp.set .pos-pill-text {
+  font-size: 14.5px;
+  font-weight: 750;
+  color: var(--up, #10b981);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pos-pill-tp.unset .pos-pill-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.pos-liq-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pos-liq-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* Action Buttons */
+.pos-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+.pos-actions .btn {
+  flex: 1;
+  min-height: 38px;
+  font-weight: 650;
+  border-radius: 8px;
+  font-size: 13.5px;
+}
+.pos-btn-edit {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.pos-btn-edit:hover {
+  background: var(--surface);
+  border-color: var(--ink-3);
+}
+.pos-btn-close {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--down, #ef4444);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+.pos-btn-close:hover:not(:disabled) {
+  background: var(--down, #ef4444);
+  color: #ffffff;
+}
+
 /* ------------------------------------------------------------------ responsive */
 @media (max-width: 1180px) {
   .workspace { grid-template-columns: minmax(0, 1fr) 320px; }

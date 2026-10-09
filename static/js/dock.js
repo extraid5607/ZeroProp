@@ -47,6 +47,193 @@ function keyedTable(columns, getKey) {
   return { el: table, update };
 }
 
+function keyedPositions(closePosition, openStops) {
+  const container = h('div', { class: 'pos-card-list' });
+  const cards = new Map();
+
+  function update(positions) {
+    const keys = new Set(positions.map((p) => p.id));
+    for (const [k, row] of cards) {
+      if (!keys.has(k)) {
+        row.el.remove();
+        cards.delete(k);
+      }
+    }
+
+    let prev = null;
+    for (const p of positions) {
+      const m = market(p.symbol);
+      let row = cards.get(p.id);
+
+      if (!row) {
+        const markPrice = h('span', { class: 'pos-val font-num' });
+        const pnlHero = h('div', { class: 'pos-pnl-hero' });
+        const pnlVal = h('div', { class: 'pos-pnl-num font-num' });
+        const pnlPct = h('span', { class: 'pos-pnl-pct font-num' });
+        const rBadge = h('span', { class: 'badge sm pos-r-badge' });
+        const slVal = h('span', { class: 'pos-pill-text font-num' });
+        const slPill = h('div', {
+          class: 'pos-pill pos-pill-sl',
+          role: 'button',
+          tabindex: '0',
+          title: 'Click to adjust Stop-Loss',
+          on: { click: () => { const cur = (store.account?.positions || []).find((x) => x.id === p.id); if (cur) openStops(cur); } },
+        },
+          h('span', { class: 'pos-dot dot-red' }),
+          slVal);
+
+        const tpVal = h('span', { class: 'pos-pill-text font-num' });
+        const tpPill = h('div', {
+          class: 'pos-pill pos-pill-tp',
+          role: 'button',
+          tabindex: '0',
+          title: 'Click to adjust Take-Profit',
+          on: { click: () => { const cur = (store.account?.positions || []).find((x) => x.id === p.id); if (cur) openStops(cur); } },
+        },
+          h('span', { class: 'pos-dot dot-green' }),
+          tpVal);
+
+        const liqVal = h('span', { class: 'pos-val font-num' });
+        const liqPill = h('span', { class: 'badge sm pos-liq-badge' });
+
+        const closeBtn = h('button', {
+          type: 'button',
+          class: 'btn sm danger pos-btn-close',
+          on: { click: () => closePosition(p.id, closeBtn) },
+        }, 'Close Position');
+
+        const editBtn = h('button', {
+          type: 'button',
+          class: 'btn sm ghost pos-btn-edit',
+          on: { click: () => { const cur = (store.account?.positions || []).find((x) => x.id === p.id); if (cur) openStops(cur); } },
+        });
+        editBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit stops';
+
+        const el = h('article', { class: 'pos-card', 'data-pos-id': String(p.id) },
+          // Header: Symbol, Side/Lev, Size & Hero PnL
+          h('div', { class: 'pos-head' },
+            h('div', { class: 'pos-market' },
+              h('div', { class: 'pos-sym-line' },
+                h('strong', { class: 'pos-sym' }, marketLabel(m)),
+                sideBadge(p.side, ` ${p.leverage}×`)),
+              h('div', { class: 'pos-meta-line muted' },
+                h('span', null, `${qtyText(m, p.qty)} ${m.qty_label}`),
+                h('span', { class: 'pos-meta-sep' }, '·'),
+                h('span', null, money(p.notional, { decimals: 0 })))),
+            mount(pnlHero,
+              h('span', { class: 'pos-pnl-label' }, 'UNREALIZED P&L'),
+              pnlVal,
+              h('div', { class: 'pos-pnl-sub' }, pnlPct, rBadge))),
+
+          // Key Metrics Grid
+          h('div', { class: 'pos-grid' },
+            // 1. Entry Price
+            h('div', { class: 'pos-tile' },
+              h('span', { class: 'pos-tile-lbl' }, 'Entry Price'),
+              h('span', { class: 'pos-val font-num' }, price(m, p.entry))),
+
+            // 2. Mark / Current Price
+            h('div', { class: 'pos-tile' },
+              h('span', { class: 'pos-tile-lbl' }, 'Mark Price'),
+              markPrice),
+
+            // 3. Stop Loss (SL)
+            h('div', { class: 'pos-tile pos-tile-sl' },
+              h('span', { class: 'pos-tile-lbl' }, 'Stop Loss (SL)'),
+              slPill),
+
+            // 4. Target (TP)
+            h('div', { class: 'pos-tile pos-tile-tp' },
+              h('span', { class: 'pos-tile-lbl' }, 'Target (TP)'),
+              tpPill),
+
+            // 5. Margin Held
+            h('div', { class: 'pos-tile' },
+              h('span', { class: 'pos-tile-lbl' }, 'Margin Held'),
+              h('span', { class: 'pos-val font-num' }, money(p.margin || (p.notional / p.leverage), { decimals: 2 }))),
+
+            // 6. Liquidation
+            h('div', { class: 'pos-tile pos-tile-liq' },
+              h('span', { class: 'pos-tile-lbl' }, 'Est. Liquidation'),
+              h('div', { class: 'pos-liq-row' }, liqVal, liqPill))),
+
+          // Action buttons
+          h('div', { class: 'pos-actions' },
+            editBtn,
+            closeBtn));
+
+        row = {
+          el,
+          refs: {
+            markPrice,
+            pnlHero,
+            pnlVal,
+            pnlPct,
+            rBadge,
+            slVal,
+            slPill,
+            tpVal,
+            tpPill,
+            liqVal,
+            liqPill,
+          },
+        };
+        cards.set(p.id, row);
+      }
+
+      // Live updates
+      const { refs } = row;
+      refs.markPrice.textContent = price(m, p.price);
+      refs.pnlHero.className = `pos-pnl-hero ${tone(p.upnl)}`;
+      refs.pnlVal.textContent = `${arrow(p.upnl)} ${money(p.upnl, { sign: true })}`;
+      refs.pnlPct.textContent = pct(p.upnl_pct, { sign: true });
+
+      if (p.r_now != null) {
+        refs.rBadge.style.display = 'inline-flex';
+        refs.rBadge.textContent = rMult(p.r_now);
+        refs.rBadge.className = `badge sm pos-r-badge ${tone(p.r_now)}`;
+      } else {
+        refs.rBadge.style.display = 'none';
+      }
+
+      // SL Pill update
+      if (p.sl != null) {
+        refs.slVal.textContent = price(m, p.sl);
+        refs.slPill.className = 'pos-pill pos-pill-sl set';
+      } else {
+        refs.slVal.textContent = 'None · Set SL';
+        refs.slPill.className = 'pos-pill pos-pill-sl unset';
+      }
+
+      // TP Pill update
+      if (p.tp != null) {
+        refs.tpVal.textContent = price(m, p.tp);
+        refs.tpPill.className = 'pos-pill pos-pill-tp set';
+      } else {
+        refs.tpVal.textContent = 'None · Set TP';
+        refs.tpPill.className = 'pos-pill pos-pill-tp unset';
+      }
+
+      // Liq update
+      refs.liqVal.textContent = price(m, p.liq);
+      if (p.liq_distance_pct != null) {
+        const near = p.liq_distance_pct < 5;
+        const warn = p.liq_distance_pct < 10;
+        refs.liqPill.textContent = `${pct(p.liq_distance_pct, { decimals: 1 })} away`;
+        refs.liqPill.className = `badge sm pos-liq-badge ${near ? 'down' : warn ? 'warn' : ''}`;
+      } else {
+        refs.liqPill.textContent = '';
+      }
+
+      const ref = prev ? prev.nextSibling : container.firstChild;
+      if (row.el !== ref) container.insertBefore(row.el, ref);
+      prev = row.el;
+    }
+  }
+
+  return { el: container, update };
+}
+
 export function createDock(root) {
   const unsub = [];
   let tab = 'positions';
@@ -59,29 +246,7 @@ export function createDock(root) {
   mount(root, tabs, body);
 
   // ---------------------------------------------------------------- positions
-  const posTable = keyedTable([
-    { label: 'Market', cls: 'sym', once: true, fill: (td, p) => { const m = market(p.symbol); td.append(marketLabel(m), h('span', { class: 'sub' }, sideBadge(p.side, ` ${p.leverage}×`))); } },
-    { label: 'Size', cls: 'r', once: true, fill: (td, p) => { const m = market(p.symbol); td.append(`${qtyText(m, p.qty)} ${m.qty_label}`, h('span', { class: 'sub' }, money(p.notional, { decimals: 0 }))); } },
-    { label: 'Entry', cls: 'r', once: true, fill: (td, p) => { td.textContent = price(market(p.symbol), p.entry); } },
-    { label: 'Price', cls: 'r', fill: (td, p) => { td.textContent = price(market(p.symbol), p.price); } },
-    { label: 'P&L', cls: 'r', fill: (td, p) => {
-      td.className = `r ${tone(p.upnl)}`;
-      mount(td, `${arrow(p.upnl)} ${money(p.upnl, { sign: true })}`.trim(), h('span', { class: 'sub' }, pct(p.upnl_pct, { sign: true })));
-    } },
-    { label: 'R', cls: 'r', fill: (td, p) => { td.className = `r ${tone(p.r_now)}`; td.textContent = p.r_now != null ? rMult(p.r_now) : '–'; } },
-    { label: 'Stop', cls: 'r', fill: (td, p) => { td.textContent = p.sl != null ? price(market(p.symbol), p.sl) : '–'; } },
-    { label: 'Target', cls: 'r', fill: (td, p) => { td.textContent = p.tp != null ? price(market(p.symbol), p.tp) : '–'; } },
-    { label: 'Liquidation', cls: 'r', fill: (td, p) => {
-      const near = p.liq_distance_pct != null && p.liq_distance_pct < 5;
-      mount(td, price(market(p.symbol), p.liq), h('span', { class: `sub ${near ? 'down' : ''}` }, p.liq_distance_pct != null ? `${pct(p.liq_distance_pct, { decimals: 1 })} away` : ''));
-    } },
-    { label: '', cls: 'full', once: true, fill: (td, p) => {
-      const closeBtn = h('button', { type: 'button', class: 'btn sm', on: { click: () => closePosition(p.id, closeBtn) } }, 'Close');
-      td.append(h('div', { class: 'acts' },
-        h('button', { type: 'button', class: 'btn sm ghost', on: { click: () => { const cur = (store.account?.positions || []).find((x) => x.id === p.id); if (cur) openStopsDialog(cur); } } }, 'Edit stops'),
-        closeBtn));
-    } },
-  ], (p) => p.id);
+  const posTable = keyedPositions(closePosition, openStopsDialog);
 
   async function closePosition(id, btn) {
     btn.disabled = true;
