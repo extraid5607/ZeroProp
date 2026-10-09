@@ -124,6 +124,68 @@ class CcxtFeed:
                 pass
 
 
+# --------------------------------------------------------------------------- Commodity (Gate.io)
+class CommodityFeed:
+    """0-delay real-time commodities feed (Gold, Silver, Crude Oil) via Gate.io futures API."""
+    BASE = "https://api.gateio.ws/api/v4/futures/usdt"
+    CONTRACT_MAP = {
+        "XAUUSD": "XAU_USDT",
+        "XAGUSD": "XAG_USDT",
+        "CLUSD": "CL_USDT",
+    }
+    INTERVAL_MAP = {
+        "1m": "1m", "5m": "5m", "15m": "15m",
+        "1h": "1h", "4h": "4h", "1d": "1d",
+    }
+
+    def __init__(self) -> None:
+        self._http = httpx.AsyncClient(
+            timeout=8,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+                "Accept": "application/json",
+            },
+        )
+
+    async def quotes(self, wanted: dict[str, tuple[str, ...]]) -> dict[str, Quote]:
+        out: dict[str, Quote] = {}
+        try:
+            r = await self._http.get(f"{self.BASE}/tickers")
+            if r.status_code == 200:
+                data = {item["contract"]: item for item in r.json() if "contract" in item}
+                now = time.time()
+                for mid in wanted:
+                    contract = self.CONTRACT_MAP.get(mid)
+                    if not contract:
+                        continue
+                    item = data.get(contract)
+                    if item and float(item.get("last") or 0) > 0:
+                        p = float(item["last"])
+                        chg = float(item.get("change_percentage") or 0)
+                        bid = float(item["highest_bid"]) if item.get("highest_bid") else None
+                        ask = float(item["lowest_ask"]) if item.get("lowest_ask") else None
+                        out[mid] = Quote(price=p, ts=now, source="gate", change24h=chg, bid=bid, ask=ask)
+        except Exception as exc:
+            log.warning("gate commodity ticker fetch failed: %s", exc)
+        return out
+
+    async def candles(self, mid: str, tf: str, limit: int = 300) -> list[Candle]:
+        contract = self.CONTRACT_MAP.get(mid)
+        if not contract:
+            raise KeyError(f"no commodity contract for {mid}")
+        interval = self.INTERVAL_MAP.get(tf, "15m")
+        r = await self._http.get(f"{self.BASE}/candlesticks", params={"contract": contract, "interval": interval, "limit": limit})
+        if r.status_code != 200:
+            raise RuntimeError(f"gate candlesticks HTTP {r.status_code}")
+        rows: list[Candle] = []
+        for c in r.json():
+            rows.append([float(c["t"]), float(c["o"]), float(c["h"]), float(c["l"]), float(c["c"]), float(c["v"])])
+        return rows
+
+    async def close(self) -> None:
+        await self._http.aclose()
+
+
 # --------------------------------------------------------------------------- Yahoo
 class YahooFeed:
     BASES = (
@@ -173,8 +235,7 @@ class YahooFeed:
             raise RuntimeError(f"yahoo {symbol}: no price")
         prev = meta.get("chartPreviousClose") or meta.get("previousClose")
         now = time.time()
-        ts = float(meta.get("regularMarketTime") or now)
-        return Quote(price=float(price), ts=min(ts, now), source="yahoo",
+        return Quote(price=float(price), ts=now, source="yahoo",
                      change24h=((float(price) / float(prev) - 1) * 100) if prev else None)
 
     async def _fallback_rates(self, wanted: dict[str, str]) -> dict[str, Quote]:
@@ -312,6 +373,7 @@ class PriceHub:
     COOLDOWN = 45          # seconds a failing source is skipped
     FAILS_BEFORE_SKIP = 2
     CCXT_EVERY = 2.0
+    GATE_EVERY = 2.5
     YAHOO_EVERY = 8.0
 
     def __init__(self) -> None:
@@ -322,6 +384,7 @@ class PriceHub:
         self._skip_until: dict[tuple[str, int], float] = {}
         # (symbol, timeframe) -> (fetched at, candles, how many were requested)
         self._candle_cache: dict[tuple[str, str], tuple[float, list[Candle], int]] = {}
+        self.commodities = CommodityFeed()
         self.ccxt = CcxtFeed()
         self.yahoo = YahooFeed()
         self.demo_feed = DemoFeed()
@@ -334,6 +397,7 @@ class PriceHub:
             self._tasks = [asyncio.create_task(self._demo_loop())]
         else:
             self._tasks = [
+                asyncio.create_task(self._loop("gate", self.GATE_EVERY)),
                 asyncio.create_task(self._loop("ccxt", self.CCXT_EVERY)),
                 asyncio.create_task(self._loop("yahoo", self.YAHOO_EVERY)),
             ]
@@ -342,6 +406,7 @@ class PriceHub:
         for t in self._tasks:
             t.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
+        await self.commodities.close()
         await self.ccxt.close()
         await self.yahoo.close()
 
@@ -423,7 +488,9 @@ class PriceHub:
         async def run(key, group):
             _, venue = key
             try:
-                if provider == "ccxt":
+                if provider == "gate":
+                    got = await self.commodities.quotes({mid: v[2] for mid, v in group.items()})
+                elif provider == "ccxt":
                     got = await self.ccxt.quotes(venue, {mid: v[2] for mid, v in group.items()})
                 else:
                     got = await self.yahoo.quotes({mid: v[2][0] for mid, v in group.items()})
@@ -482,7 +549,9 @@ class PriceHub:
             for idx in self._order(m):
                 src = m.sources[idx]
                 try:
-                    if src.provider == "ccxt":
+                    if src.provider == "gate":
+                        rows = await self.commodities.candles(mid, tf, limit)
+                    elif src.provider == "ccxt":
                         rows = await self.ccxt.candles(src.venue, src.symbols, tf, limit)
                     else:
                         rows = await self.yahoo.candles(src.symbols[0], tf, limit)

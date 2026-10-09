@@ -7,7 +7,7 @@ import { REASONS } from '../dialogs.js';
 
 const PERIODS = [['all', 'All time'], ['30d', 'Last 30 days'], ['7d', 'Last 7 days']];
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const CLASS_NAMES = { crypto: 'Crypto', metal: 'Metals', forex: 'Forex' };
+const CLASS_NAMES = { crypto: 'Crypto', metal: 'Commodities', forex: 'Forex' };
 
 function signed(n) { return `${arrow(n)} ${money(n, { sign: true })}`.trim(); }
 

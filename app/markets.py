@@ -58,15 +58,16 @@ def _crypto(base: str, name: str, decimals: int, step: float, min_qty: float,
     )
 
 
-def _metal(base: str, name: str, yahoo: tuple[str, ...], decimals: int, step: float,
-           min_qty: float, base_price: float, vol: float) -> Market:
-    sources = [Source("ccxt", v, (f"{base}/USDT:USDT", f"{base}/USDT")) for v in settings.metal_venues]
+def _commodity(id: str, name: str, base: str, ccxt_symbols: tuple[str, ...], yahoo: tuple[str, ...],
+               decimals: int, step: float, min_qty: float, base_price: float, vol: float, qty_label: str) -> Market:
+    sources = [Source("gate", "", ccxt_symbols)]
+    sources += [Source("ccxt", v, ccxt_symbols) for v in settings.metal_venues]
     sources += [Source("yahoo", "", (y,)) for y in yahoo]
     return Market(
-        id=f"{base}USD", name=name, base=base, quote="USD", cls="metal", kind="linear",
+        id=id, name=name, base=base, quote="USD", cls="metal", kind="linear",
         decimals=decimals, qty_step=step, min_qty=min_qty, max_leverage=20,
-        fee_rate=0.0005, maker_rate=0.0002, qty_label="oz",
-        base_price=base_price, vol=vol, sources=tuple(sources), stale_after=600,
+        fee_rate=0.0005, maker_rate=0.0002, qty_label=qty_label,
+        base_price=base_price, vol=vol, sources=tuple(sources), stale_after=7200,
     )
 
 
@@ -77,7 +78,7 @@ def _fx(base: str, quote: str, decimals: int, base_price: float, vol: float = 0.
         kind=kind, decimals=decimals, qty_step=1000, min_qty=1000, max_leverage=30,
         fee_rate=0.0001, maker_rate=0.00005, qty_label=base,
         base_price=base_price, vol=vol,
-        sources=(Source("yahoo", "", (f"{base}{quote}=X",)),), stale_after=600,
+        sources=(Source("yahoo", "", (f"{base}{quote}=X",)),), stale_after=7200,
     )
 
 
@@ -93,10 +94,11 @@ _MARKETS: list[Market] = [
     _crypto("AVAX", "Avalanche", 2, 0.1, 0.1, 28, 0.90),
     _crypto("LINK", "Chainlink", 3, 0.1, 0.1, 15, 0.85),
     _crypto("LTC", "Litecoin", 2, 0.01, 0.01, 90, 0.75),
-    # --- metals (Binance gold/silver perpetuals via CCXT, Yahoo as fallback) ---------
-    _metal("XAU", "Gold", ("XAUUSD=X", "GC=F"), 2, 0.01, 0.01, 4_300, 0.18),
-    _metal("XAG", "Silver", ("XAGUSD=X", "SI=F"), 3, 0.1, 0.1, 55, 0.35),
-    # --- forex majors (Yahoo Finance) -------------------------------------------------
+    # --- commodities: Gold, Silver, Crude Oil (Gate.io 0-delay real-time + Yahoo fallback) ---
+    _commodity("XAUUSD", "Gold", "XAU", ("XAU/USDT:USDT", "PAXG/USDT", "XAU/USDT"), ("GC=F", "XAUUSD=X"), 2, 0.01, 0.01, 4_200, 0.18, "oz"),
+    _commodity("XAGUSD", "Silver", "XAG", ("XAG/USDT:USDT", "XAG/USDT"), ("SI=F", "XAGUSD=X"), 3, 0.1, 0.1, 60, 0.35, "oz"),
+    _commodity("CLUSD", "Crude Oil", "WTI", ("CL/USDT:USDT", "CL/USDT"), ("CL=F", "BZ=F"), 2, 0.1, 0.1, 90.0, 0.35, "bbl"),
+    # --- forex majors (Yahoo Finance + open-er fallback) ------------------------------
     _fx("EUR", "USD", 5, 1.16),
     _fx("GBP", "USD", 5, 1.33),
     _fx("AUD", "USD", 5, 0.66),

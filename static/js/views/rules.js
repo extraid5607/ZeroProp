@@ -64,7 +64,7 @@ export function renderRules(root) {
   }
 
   // fees and leverage, read from the live market catalogue
-  const classes = [['crypto', 'Crypto'], ['metal', 'Gold and silver'], ['forex', 'Forex']].map(([cls, label]) => {
+  const classes = [['crypto', 'Crypto'], ['metal', 'Commodities (Gold, Silver, Oil)'], ['forex', 'Forex']].map(([cls, label]) => {
     const m = store.markets.find((x) => x.cls === cls);
     return m ? { label, taker: m.fee_rate * 100, maker: m.maker_rate * 100, lev: m.max_leverage } : null;
   }).filter(Boolean);
@@ -98,7 +98,7 @@ export function renderRules(root) {
           h('li', null, 'A stop-loss fills at the price when it triggers. In a fast move that can be worse than your stop, so a loss can be bigger than 1R.'),
           h('li', null, 'A take-profit fills at your target price.'),
           h('li', null, 'Every position has its own margin. If losses use it up, the position is liquidated at the liquidation price shown in the order panel.'),
-          h('li', null, 'Crypto prices come from public exchange data. Forex and metals come from public market data, can lag by a few seconds, and pause when those markets are closed.')),
+          h('li', null, 'Crypto and commodities (Gold, Silver, Oil) come from real-time exchange data with 0 delay. Forex comes from public market data and pauses when FX markets close on weekends.')),
         h('div', { style: { overflowX: 'auto' } },
           h('table', { class: 'tbl' },
             h('thead', null, h('tr', null, [['Market', ''], ['Market order fee', 'r'], ['Limit order fee', 'r'], ['Max leverage', 'r']].map(([t, c]) => h('th', { class: c }, t)))),

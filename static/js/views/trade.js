@@ -8,7 +8,7 @@ import { createDock } from '../dock.js';
 
 const TFS = [['1m', '1m'], ['5m', '5m'], ['15m', '15m'], ['1h', '1h'], ['4h', '4h'], ['1d', '1D']];
 const TF_SEC = { '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400 };
-const GROUPS = [['crypto', 'Crypto'], ['metal', 'Metals'], ['forex', 'Forex']];
+const GROUPS = [['crypto', 'Crypto'], ['metal', 'Commodities'], ['forex', 'Forex']];
 
 function title(m) { return m.cls === 'crypto' ? `${m.base}/${m.quote}` : m.name; }
 
