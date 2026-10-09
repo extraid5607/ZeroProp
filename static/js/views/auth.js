@@ -100,7 +100,7 @@ export function renderAuth(root, onAuthed) {
           h('span', { class: 'brand-text' },
             h('span', { class: 'brand-zero' }, 'Zero'),
             h('span', { class: 'brand-prop' }, 'Prop')))),
-      h('div', null,
+      h('div', { class: 'auth-intro' },
         h('h1', null, 'Learn to trade with pretend money'),
         h('p', { class: 'auth-lead' }, 'Start with $10,000. Trade crypto, forex, gold and silver on live prices, and find out what a trade would really have cost you before it costs you anything.'),
         h('ul', { class: 'auth-points' },
