@@ -715,6 +715,244 @@ dialog::backdrop { background: rgba(8, 14, 28, .55); }
 .mobile-back-chart { display: none; }
 .nav-icon { display: none; }
 
+/* ------------------------------------------------------------------ subtab switcher */
+.subtabs-header {
+  display: flex;
+  justify-content: center;
+  padding: 16px 20px 4px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+.subtabs-seg {
+  display: flex;
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  padding: 3px;
+  gap: 4px;
+}
+.subtabs-seg .seg-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  transition: all 0.15s ease;
+}
+.subtabs-seg .seg-btn:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+.subtabs-seg .seg-btn[aria-pressed="true"],
+.subtabs-seg .seg-btn[aria-selected="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+.subtabs-content {
+  min-height: 400px;
+}
+.subtabs-content > .page {
+  padding-top: 8px;
+}
+
+/* ------------------------------------------------------------------ Watchlist */
+.watchlist-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 14px 0 16px;
+}
+.watchlist-search {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.watchlist-search:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+.watchlist-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.watchlist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wl-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 18px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.wl-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+.wl-card:active {
+  transform: translateY(0);
+}
+.wl-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+.wl-sym-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wl-sym {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.wl-tag-crypto {
+  background: rgba(247, 147, 26, 0.12);
+  color: #f7931a;
+  border: 1px solid rgba(247, 147, 26, 0.3);
+  font-weight: 600;
+}
+.wl-tag-metal {
+  background: rgba(234, 179, 8, 0.12);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  font-weight: 600;
+}
+.wl-tag-forex {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  font-weight: 600;
+}
+.wl-name {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.wl-quote {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin-left: auto;
+  margin-right: 18px;
+}
+.wl-price {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.wl-chg {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.wl-act {
+  display: flex;
+  align-items: center;
+}
+.wl-trade-btn {
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ Account */
+.account-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 820px;
+  margin: 0 auto;
+}
+.account-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 24px;
+  border-radius: 12px;
+}
+.account-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent) 0%, #38bdf8 100%);
+  color: var(--accent-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(0, 240, 255, 0.3);
+}
+.account-user-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.account-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.account-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.account-rule-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.account-actions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.account-actions-grid .btn {
+  justify-content: flex-start;
+  padding: 12px 16px;
+  min-height: 44px;
+  font-size: 14px;
+  gap: 10px;
+}
+
 /* ------------------------------------------------------------------ responsive */
 @media (max-width: 1180px) {
   .workspace { grid-template-columns: minmax(0, 1fr) 320px; }
@@ -1261,6 +1499,20 @@ dialog::backdrop { background: rgba(8, 14, 28, .55); }
   .rules-actions .btn { flex: 1; }
   .page-head { flex-direction: column; align-items: flex-start; gap: 8px; }
   .page-head .seg { width: 100%; max-width: 100% !important; }
+
+  /* Subtabs switcher mobile */
+  .subtabs-header { padding: 6px 4px 2px; }
+  .subtabs-seg { max-width: 100%; }
+
+  /* Watchlist mobile */
+  .wl-card { padding: 11px 12px; }
+  .wl-act { display: none; }
+  .wl-quote { margin-right: 0; }
+
+  /* Account mobile */
+  .account-kpi-grid { grid-template-columns: 1fr; gap: 8px; }
+  .account-hero { padding: 14px 16px; gap: 14px; }
+  .account-avatar { width: 46px; height: 46px; font-size: 18px; }
 }
 
 @media (max-width: 420px) {

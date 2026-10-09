@@ -7,26 +7,35 @@ import {
 } from './store.js';
 import { renderAuth } from './views/auth.js';
 import { renderTrade } from './views/trade.js';
-import { renderJournal } from './views/journal.js';
-import { renderStats } from './views/stats.js';
-import { renderRules } from './views/rules.js';
-import { renderLeaderboard } from './views/leaderboard.js';
+import { renderWatchlist } from './views/watchlist.js';
+import { renderJournalStats } from './views/journal_stats.js';
+import { renderRulesRanks } from './views/rules_ranks.js';
+import { renderAccount } from './views/account.js';
 import { openInstallDialog } from './dialogs.js';
 
 const ROUTES = [
   ['trade', 'Trade', renderTrade],
-  ['journal', 'Journal', renderJournal],
-  ['stats', 'Stats', renderStats],
-  ['rules', 'Rules', renderRules],
-  ['leaderboard', 'Ranks', renderLeaderboard],
+  ['watchlist', 'Watchlist', renderWatchlist],
+  ['journal', 'Journal', renderJournalStats],
+  ['rules', 'Rules', renderRulesRanks],
+  ['account', 'Account', renderAccount],
 ];
-const ROUTE_TITLES = { trade: 'Trade', journal: 'Journal', stats: 'Stats', rules: 'Risk rules', leaderboard: 'Leaderboard' };
+const ROUTE_TITLES = {
+  trade: 'Trade',
+  watchlist: 'Watchlist',
+  journal: 'Journal & Stats',
+  stats: 'Statistics',
+  rules: 'Risk rules',
+  ranks: 'Leaderboard',
+  leaderboard: 'Leaderboard',
+  account: 'Account',
+};
 const ROUTE_ICONS = {
   trade: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-6 4 4 6-9"/></svg>',
+  watchlist: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
   journal: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>',
-  stats: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>',
   rules: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
-  leaderboard: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H7M14 14.66V17c0 .55.45 1 1 1h2M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+  account: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
 };
 
 const root = document.getElementById('app');
@@ -36,6 +45,8 @@ let unsubShell = [];
 
 function routeFromHash() {
   const id = (location.hash || '').replace(/^#\/?/, '').split(/[?/]/)[0];
+  if (id === 'stats') return 'journal';
+  if (id === 'leaderboard' || id === 'ranks') return 'rules';
   return ROUTES.some((r) => r[0] === id) ? id : 'trade';
 }
 
@@ -194,7 +205,8 @@ function showRoute(moveFocus) {
   stopView();
   window.scrollTo(0, 0);
   drawNav(id);
-  setTitle(ROUTE_TITLES[id]);
+  const rawId = (location.hash || '').replace(/^#\/?/, '').split(/[?/]/)[0];
+  setTitle(ROUTE_TITLES[rawId] || ROUTE_TITLES[id]);
   try {
     destroyView = route[2](shell.main) || null;
   } catch (e) {
