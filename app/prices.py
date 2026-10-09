@@ -132,6 +132,10 @@ class CommodityFeed:
         "XAUUSD": "XAU_USDT",
         "XAGUSD": "XAG_USDT",
         "CLUSD": "CL_USDT",
+        "BZUSD": "BZ_USDT",
+        "NGUSD": "NG_USDT",
+        "XPTUSD": "XPT_USDT",
+        "XPDUSD": "XPD_USDT",
     }
     INTERVAL_MAP = {
         "1m": "1m", "5m": "5m", "15m": "15m",
