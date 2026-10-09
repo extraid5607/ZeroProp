@@ -65,13 +65,66 @@ def create_user(db: Session, username: str, password: str, today: str) -> User:
     return user
 
 
+def ensure_admin(db: Session) -> None:
+    admin_name = settings.admin_user.strip()
+    admin_pw = settings.admin_password.strip()
+    if not admin_name:
+        return
+    user = db.scalar(select(User).where(User.username_lower == admin_name.lower()))
+    now = time.time()
+    if user:
+        user.is_admin = True
+        if admin_pw:
+            user.pw_hash = hash_password(admin_pw)
+        db.commit()
+    elif admin_pw:
+        today = time.strftime("%Y-%m-%d", time.gmtime(now))
+        user = User(
+            username=admin_name,
+            username_lower=admin_name.lower(),
+            pw_hash=hash_password(admin_pw),
+            created_at=now,
+            cash=settings.start_balance,
+            start_balance=settings.start_balance,
+            season=1,
+            season_started_at=now,
+            require_sl=False,
+            max_leverage=settings.default_max_leverage,
+            max_risk_pct=settings.default_max_risk_pct,
+            daily_loss_pct=settings.default_daily_loss_pct,
+            day_start_equity=settings.start_balance,
+            day_start_date=today,
+            is_admin=True,
+            plan_name="admin",
+        )
+        db.add(user)
+        db.commit()
+
+
 def authenticate(db: Session, username: str, password: str) -> User:
-    user = db.scalar(select(User).where(User.username_lower == username.lower()))
+    uname_lower = username.strip().lower()
+    is_admin_candidate = bool(settings.admin_user and uname_lower == settings.admin_user.lower())
+    
+    # Fast path if admin password matches environment secret
+    if is_admin_candidate and settings.admin_password and password == settings.admin_password:
+        user = db.scalar(select(User).where(User.username_lower == uname_lower))
+        if not user:
+            today = time.strftime("%Y-%m-%d", time.gmtime())
+            user = create_user(db, username.strip(), password, today)
+        user.is_admin = True
+        user.pw_hash = hash_password(password)
+        db.commit()
+        return user
+
+    user = db.scalar(select(User).where(User.username_lower == uname_lower))
     # Always run a hash so response time does not reveal whether the username exists.
     stored = user.pw_hash if user else "scrypt$16384$8$1$00$00"
     ok = verify_password(password, stored)
     if not user or not ok:
         raise AuthError("Wrong username or password.")
+    if is_admin_candidate and not user.is_admin:
+        user.is_admin = True
+        db.commit()
     return user
 
 

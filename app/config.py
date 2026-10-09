@@ -76,6 +76,7 @@ class Settings:
     # Monetization & UPI settings
     upi_id: str
     admin_user: str
+    admin_password: str
     admin_key: str
 
 
@@ -97,6 +98,7 @@ def load_settings() -> Settings:
         default_daily_loss_pct=_float("DEFAULT_DAILY_LOSS_PCT", 10.0),
         upi_id=os.getenv("UPI_ID", "Harjinder1070-2@okaxis").strip(),
         admin_user=os.getenv("ADMIN_USER", "admin").strip().lower(),
+        admin_password=os.getenv("ADMIN_PASSWORD", "").strip(),
         admin_key=os.getenv("ADMIN_KEY", "zeroprop_admin_2026").strip(),
     )
 

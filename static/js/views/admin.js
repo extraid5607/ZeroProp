@@ -11,15 +11,43 @@ export function renderAdmin(root) {
   let payments = [];
 
   function renderUnlock() {
-    const keyInput = h('input', { type: 'password', placeholder: 'Enter Admin Secret Key', autocomplete: 'off' });
+    const userIn = h('input', { type: 'text', placeholder: 'Admin Username (e.g. admin)', autocomplete: 'username' });
+    const passIn = h('input', { type: 'password', placeholder: 'Admin Password', autocomplete: 'current-password' });
     const errEl = h('p', { class: 'dlg-error', role: 'alert' });
-    const unlockBtn = h('button', { type: 'button', class: 'btn primary' }, 'Unlock Admin Portal');
+    const loginBtn = h('button', { type: 'button', class: 'btn primary' }, 'Sign In as Admin');
 
-    unlockBtn.addEventListener('click', async () => {
-      const key = keyInput.value.trim();
-      if (!key) { errEl.textContent = 'Please enter the admin key.'; return; }
-      unlockBtn.disabled = true;
+    loginBtn.addEventListener('click', async () => {
+      const u = userIn.value.trim(), p = passIn.value;
+      if (!u || !p) { errEl.textContent = 'Please enter both Admin username and password.'; return; }
+      loginBtn.disabled = true;
       errEl.textContent = '';
+      try {
+        const r = await api('/api/auth/login', { method: 'POST', body: { username: u, password: p } });
+        if (store.me) store.me.user = r.user;
+        toast(`Signed in as ${r.user.username}!`, 'ok');
+        loadPayments();
+      } catch (e) {
+        errEl.textContent = e.message || 'Login failed.';
+        loginBtn.disabled = false;
+      }
+    });
+
+    userIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') passIn.focus(); });
+    passIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') loginBtn.click(); });
+
+    // Optional admin key fallback
+    const keyToggle = h('button', { type: 'button', class: 'btn sm ghost', style: { alignSelf: 'start', marginTop: '6px' } }, 'Or unlock with Admin Key →');
+    const keyBox = h('div', { style: { display: 'none', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--line)', paddingTop: '10px' } });
+    const keyInput = h('input', { type: 'password', placeholder: 'Admin Key', autocomplete: 'off' });
+    const unlockKeyBtn = h('button', { type: 'button', class: 'btn sm' }, 'Unlock with Key');
+
+    keyToggle.addEventListener('click', () => {
+      keyBox.style.display = keyBox.style.display === 'none' ? 'flex' : 'none';
+    });
+
+    unlockKeyBtn.addEventListener('click', async () => {
+      const key = keyInput.value.trim();
+      if (!key) return;
       try {
         const r = await api('/api/admin/make-admin', { method: 'POST', body: { admin_key: key } });
         if (store.me && store.me.user) store.me.user.is_admin = true;
@@ -27,23 +55,22 @@ export function renderAdmin(root) {
         loadPayments();
       } catch (e) {
         errEl.textContent = e.message || 'Invalid admin key.';
-        unlockBtn.disabled = false;
       }
     });
-
-    keyInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockBtn.click(); });
+    keyBox.append(h('label', { class: 'field' }, h('span', { class: 'field-label' }, 'Admin Key:'), keyInput), unlockKeyBtn);
 
     mount(container,
       h('div', { class: 'page-head' }, h('h1', null, 'Admin Verification Portal')),
-      h('p', { class: 'page-sub' }, 'Manage user evaluation upgrades and verify UPI payments.'),
-      h('div', { class: 'panel panel-pad form-grid', style: { maxWidth: '440px', margin: '40px auto 0' } },
-        h('h2', { style: { margin: 0 } }, 'Enter Admin Secret Key'),
-        h('p', { class: 'muted', style: { margin: 0, fontSize: '13px' } }, 'This portal is restricted to ZeroProp administrators.'),
-        h('label', { class: 'field' },
-          h('span', { class: 'field-label' }, 'Admin Secret Key:'),
-          keyInput),
+      h('p', { class: 'page-sub' }, 'Log in with your administrator credentials to manage evaluation accounts and verify UPI payments.'),
+      h('div', { class: 'panel panel-pad form-grid', style: { maxWidth: '440px', margin: '30px auto 0' } },
+        h('h2', { style: { margin: 0 } }, 'Admin Authentication'),
+        h('p', { class: 'muted', style: { margin: 0, fontSize: '13px' } }, 'Sign in directly with your Admin ID and Password.'),
+        h('label', { class: 'field' }, h('span', { class: 'field-label' }, 'Admin Username'), userIn),
+        h('label', { class: 'field' }, h('span', { class: 'field-label' }, 'Admin Password'), passIn),
         errEl,
-        h('div', { style: { display: 'flex', justifyContent: 'flex-end', marginTop: '8px' } }, unlockBtn)));
+        h('div', { style: { display: 'flex', justifyContent: 'flex-end', marginTop: '4px' } }, loginBtn),
+        keyToggle,
+        keyBox));
   }
 
   async function loadPayments() {

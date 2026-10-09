@@ -75,6 +75,8 @@ async def _every(seconds: float, fn) -> None:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
+    with SessionLocal() as db:
+        auth.ensure_admin(db)
     await hub.start()
     tasks = [asyncio.create_task(_every(settings.tick_seconds, _tick_sync)),
              asyncio.create_task(_every(60, _housekeeping_sync))]
