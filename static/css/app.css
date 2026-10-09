@@ -298,13 +298,216 @@ dialog::backdrop { background: rgba(8, 14, 28, .55); }
 .chart-head .seg-btn { min-width: 38px; padding: 0 8px; }
 .chart-box { position: relative; height: clamp(300px, 50vh, 540px); background: var(--chart-bg); }
 .chart-note { position: absolute; inset: 0; display: grid; place-content: center; gap: 8px; text-align: center; padding: 16px; color: var(--ink-2); background: var(--chart-bg); z-index: 2; }
-.chart-tip { padding: 6px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-3); }
-.pop {
-  position: absolute; z-index: 5; display: grid; gap: 4px; min-width: 190px; padding: 8px;
-  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 6px 24px rgba(0, 0, 0, .2);
+/* ------------------------------------------------------------------ movable SL/TP handles */
+.chart-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 3;
 }
-.pop-price { padding: 0 4px 4px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.pop .btn { justify-content: flex-start; }
+
+.chart-handle-hitline {
+  position: absolute;
+  left: 0;
+  right: 70px;
+  height: 22px;
+  transform: translateY(-50%);
+  cursor: ns-resize;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 3;
+}
+
+.chart-handle-hitline:hover {
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.08));
+}
+
+.chart-handle {
+  position: absolute;
+  right: 74px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: ns-resize;
+  pointer-events: auto;
+  user-select: none;
+  touch-action: none;
+  z-index: 4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.08s ease, box-shadow 0.12s ease;
+  white-space: nowrap;
+}
+
+.chart-handle:hover,
+.chart-handle.dragging {
+  transform: translateY(-50%) scale(1.05);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  z-index: 5;
+}
+
+.chart-handle-sl {
+  background: var(--chart-down);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.chart-handle-tp {
+  background: var(--chart-up);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.chart-handle-entry {
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  cursor: default;
+}
+
+.chart-handle-entry:hover {
+  transform: translateY(-50%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.handle-grip {
+  font-size: 13px;
+  opacity: 0.85;
+  cursor: ns-resize;
+}
+
+.handle-tag {
+  letter-spacing: 0.02em;
+}
+
+.handle-price {
+  font-weight: 700;
+}
+
+.handle-pnl {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.handle-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 2px;
+  border: 0;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.2);
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.handle-close:hover {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.handle-btn-add {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.handle-btn-add.add-sl {
+  background: var(--down-bg);
+  color: var(--down);
+  border-color: var(--down);
+}
+
+.handle-btn-add.add-tp {
+  background: var(--up-bg);
+  color: var(--up);
+  border-color: var(--up);
+}
+
+.handle-btn-add:hover {
+  filter: brightness(1.1);
+}
+
+/* ------------------------------------------------------------------ drag tooltip */
+.chart-drag-tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
+  padding: 8px 12px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  white-space: nowrap;
+  min-width: 170px;
+}
+
+.drag-tt-head {
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.drag-tt-head.down { color: var(--down); }
+.drag-tt-head.up { color: var(--up); }
+
+.drag-tt-body {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.drag-tt-price {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.drag-tt-pnl {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.drag-tt-pnl.up { color: var(--up); }
+.drag-tt-pnl.down { color: var(--down); }
+
+.drag-tt-hint {
+  font-size: 10px;
+  color: var(--ink-3);
+  border-top: 1px solid var(--line);
+  padding-top: 4px;
+  margin-top: 2px;
+}
 
 .dock { overflow: hidden; }
 .dock-tabs { display: flex; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--line); }

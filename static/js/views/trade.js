@@ -123,8 +123,7 @@ export function renderTrade(root) {
   mount(chartPanel,
     h('div', { class: 'chart-head' }, h('div', { class: 'chart-title' }, titleEl, priceEl, chgEl), tfSeg),
     box,
-    quickActions,
-    h('p', { class: 'chart-tip' }, 'Tip: click the chart to set a stop-loss or take-profit at that price.'));
+    quickActions);
 
   let chart = null;
   let ticket = null;
@@ -184,9 +183,20 @@ export function renderTrade(root) {
     if (a) {
       for (const p of a.positions) {
         if (p.symbol !== sym) continue;
-        spec.push({ key: `e${p.id}`, price: p.entry, color: accent, width: 2, title: `${p.side === 'long' ? 'Long' : 'Short'} ${qtyText(m, p.qty)}` });
-        if (p.sl != null) spec.push({ key: `s${p.id}`, price: p.sl, color: down, style: 'dashed', title: 'Stop' });
-        if (p.tp != null) spec.push({ key: `t${p.id}`, price: p.tp, color: up, style: 'dashed', title: 'Target' });
+        spec.push({
+          key: `e${p.id}`, price: p.entry, color: accent, width: 2,
+          title: `${p.side === 'long' ? 'Long' : 'Short'} ${qtyText(m, p.qty)}`,
+          type: 'entry', posId: p.id, posSide: p.side, entry: p.entry, qty: p.qty, liq: p.liq,
+          hasSl: p.sl != null, hasTp: p.tp != null,
+        });
+        if (p.sl != null) spec.push({
+          key: `s${p.id}`, price: p.sl, color: down, style: 'dashed', title: 'Stop',
+          movable: true, type: 'sl', posId: p.id, posSide: p.side, entry: p.entry, qty: p.qty, liq: p.liq,
+        });
+        if (p.tp != null) spec.push({
+          key: `t${p.id}`, price: p.tp, color: up, style: 'dashed', title: 'Target',
+          movable: true, type: 'tp', posId: p.id, posSide: p.side, entry: p.entry, qty: p.qty, liq: p.liq,
+        });
         spec.push({ key: `l${p.id}`, price: p.liq, color: warn, style: 'dotted', title: 'Liquidation' });
       }
       for (const o of a.orders) {
@@ -196,35 +206,87 @@ export function renderTrade(root) {
     }
     if (draft && draft.symbol === sym) {
       if (draft.entry) spec.push({ key: 'd-entry', price: draft.entry, color: accent, style: 'dotted', title: 'Limit (new)' });
-      if (draft.sl) spec.push({ key: 'd-sl', price: draft.sl, color: down, style: 'dotted', title: 'Stop (new)' });
-      if (draft.tp) spec.push({ key: 'd-tp', price: draft.tp, color: up, style: 'dotted', title: 'Target (new)' });
+      if (draft.sl) spec.push({ key: 'd-sl', price: draft.sl, color: down, style: 'dotted', title: 'Stop (new)', movable: true, type: 'draft-sl' });
+      if (draft.tp) spec.push({ key: 'd-tp', price: draft.tp, color: up, style: 'dotted', title: 'Target (new)', movable: true, type: 'draft-tp' });
       if (draft.liq) spec.push({ key: 'd-liq', price: draft.liq, color: warn, style: 'dotted', title: 'Liq (new)' });
     }
     chart.setLines(spec);
   }
 
-  // click on the chart -> small menu to use that price as stop-loss or take-profit
-  let pop = null;
-  function hidePop() { if (pop) { pop.remove(); pop = null; } }
+  // Handle moving and adjusting SL/TP directly from chart (drag or mouse wheel)
   if (chart) {
-    chart.onClick((p, pt) => {
-      hidePop();
+    chart.onMoveLine(async ({ key, type, posId, newPrice, finished, action }) => {
       const m = market(store.symbol);
-      pop = h('div', { class: 'pop', role: 'dialog', 'aria-label': 'Use this price' },
-        h('div', { class: 'pop-price' }, price(m, p)),
-        h('button', { type: 'button', class: 'btn sm', on: { click: () => { ticket && ticket.setField('sl', p); toast(`Stop-loss set to ${price(m, p)}`, 'info'); hidePop(); } } }, 'Use as stop-loss'),
-        h('button', { type: 'button', class: 'btn sm', on: { click: () => { ticket && ticket.setField('tp', p); toast(`Take-profit set to ${price(m, p)}`, 'info'); hidePop(); } } }, 'Use as take-profit'),
-        h('button', { type: 'button', class: 'btn sm ghost', on: { click: hidePop } }, 'Cancel'));
-      box.append(pop);
-      pop.style.left = `${Math.max(8, Math.min(pt.x + 12, box.clientWidth - 206))}px`;
-      pop.style.top = `${Math.max(8, Math.min(pt.y - 50, box.clientHeight - 148))}px`;
+      const a = store.account;
+      if (!a) return;
+      const pos = a.positions.find((x) => x.id === posId);
+
+      if (action === 'add-sl' && pos) {
+        const liveP = store.prices[pos.symbol]?.p || pos.entry;
+        const defaultSl = pos.side === 'long'
+          ? Number((liveP * 0.985).toFixed(m.decimals))
+          : Number((liveP * 1.015).toFixed(m.decimals));
+        try {
+          const r = await api(`/api/trades/${pos.id}/stops`, { method: 'PATCH', body: { sl: defaultSl, tp: pos.tp } });
+          setAccount(r.account);
+          toast(`Added stop-loss at ${price(m, defaultSl)}. Drag or scroll it to adjust.`, 'ok');
+        } catch (e) {
+          toast(e.message, 'error');
+        }
+        return;
+      }
+
+      if (action === 'add-tp' && pos) {
+        const liveP = store.prices[pos.symbol]?.p || pos.entry;
+        const defaultTp = pos.side === 'long'
+          ? Number((liveP * 1.03).toFixed(m.decimals))
+          : Number((liveP * 0.97).toFixed(m.decimals));
+        try {
+          const r = await api(`/api/trades/${pos.id}/stops`, { method: 'PATCH', body: { sl: pos.sl, tp: defaultTp } });
+          setAccount(r.account);
+          toast(`Added target at ${price(m, defaultTp)}. Drag or scroll it to adjust.`, 'ok');
+        } catch (e) {
+          toast(e.message, 'error');
+        }
+        return;
+      }
+
+      if (action === 'clear' && pos) {
+        const slVal = type === 'sl' ? null : pos.sl;
+        const tpVal = type === 'tp' ? null : pos.tp;
+        try {
+          const r = await api(`/api/trades/${pos.id}/stops`, { method: 'PATCH', body: { sl: slVal, tp: tpVal } });
+          setAccount(r.account);
+          toast(`${type === 'sl' ? 'Stop-loss' : 'Target'} removed.`, 'info');
+        } catch (e) {
+          toast(e.message, 'error');
+        }
+        return;
+      }
+
+      if (type === 'draft-sl') {
+        if (ticket) ticket.setField('sl', newPrice);
+        return;
+      }
+      if (type === 'draft-tp') {
+        if (ticket) ticket.setField('tp', newPrice);
+        return;
+      }
+
+      if (finished && pos) {
+        const slVal = type === 'sl' ? newPrice : pos.sl;
+        const tpVal = type === 'tp' ? newPrice : pos.tp;
+        try {
+          const r = await api(`/api/trades/${pos.id}/stops`, { method: 'PATCH', body: { sl: slVal, tp: tpVal } });
+          setAccount(r.account);
+          toast(`${type === 'sl' ? 'Stop-loss' : 'Target'} updated to ${price(m, newPrice)}`, 'ok');
+        } catch (e) {
+          toast(e.message, 'error');
+          syncLines();
+        }
+      }
     });
   }
-  const onKey = (e) => { if (e.key === 'Escape') hidePop(); };
-  const onDown = (e) => { if (pop && !pop.contains(e.target)) hidePop(); };
-  document.addEventListener('keydown', onKey);
-  document.addEventListener('pointerdown', onDown);
-  cleanups.push(() => { document.removeEventListener('keydown', onKey); document.removeEventListener('pointerdown', onDown); });
 
   // ---------------------------------------------------------------- wiring
   unsub.push(on('prices', () => {
@@ -233,7 +295,7 @@ export function renderTrade(root) {
     const q = store.prices[store.symbol];
     if (chart && q && q.f) chart.tick(q.p);
   }));
-  unsub.push(on('symbol', () => { hidePop(); draft = null; paintMarkets(); paintHead(); loadCandles(); syncLines(); }));
+  unsub.push(on('symbol', () => { draft = null; paintMarkets(); paintHead(); loadCandles(); syncLines(); }));
   unsub.push(on('account', syncLines));
   unsub.push(on('draft', (d) => { draft = d; syncLines(); }));
   unsub.push(on('theme', () => { if (chart) { chart.applyTheme(); syncLines(); } }));
