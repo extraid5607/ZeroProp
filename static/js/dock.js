@@ -66,7 +66,7 @@ function keyedPositions(closePosition, openStops) {
       let row = cards.get(p.id);
 
       if (!row) {
-        const markPrice = h('span', { class: 'pos-val font-num' });
+        const markPrice = h('span', { class: 'pos-val pos-mark-val font-num' });
         const pnlHero = h('div', { class: 'pos-pnl-hero' });
         const pnlVal = h('div', { class: 'pos-pnl-num font-num' });
         const pnlPct = h('span', { class: 'pos-pnl-pct font-num' });
@@ -133,8 +133,10 @@ function keyedPositions(closePosition, openStops) {
               h('span', { class: 'pos-val font-num' }, price(m, p.entry))),
 
             // 2. Mark / Current Price
-            h('div', { class: 'pos-tile' },
-              h('span', { class: 'pos-tile-lbl' }, 'Mark Price'),
+            h('div', { class: 'pos-tile pos-tile-mark' },
+              h('span', { class: 'pos-tile-lbl' },
+                h('span', { class: 'pos-dot dot-yellow' }),
+                'Mark Price'),
               markPrice),
 
             // 3. Stop Loss (SL)

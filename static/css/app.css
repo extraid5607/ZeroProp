@@ -1122,6 +1122,31 @@ dialog::backdrop { background: rgba(8, 14, 28, .55); }
   color: var(--up, #10b981);
 }
 
+/* Prominently Highlighted Mark Price (Yellow / Amber) */
+.pos-tile-mark {
+  background: rgba(234, 179, 8, 0.08);
+  border-color: rgba(234, 179, 8, 0.35);
+}
+.pos-tile-mark .pos-tile-lbl {
+  color: #eab308;
+}
+.pos-mark-val {
+  color: #eab308;
+  font-weight: 800;
+}
+.dot-yellow {
+  background: #eab308;
+  box-shadow: 0 0 6px rgba(234, 179, 8, 0.65);
+}
+[data-theme="light"] .pos-tile-mark {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(217, 119, 6, 0.38);
+}
+[data-theme="light"] .pos-tile-mark .pos-tile-lbl,
+[data-theme="light"] .pos-mark-val {
+  color: #b45309;
+}
+
 .pos-pill {
   display: inline-flex;
   align-items: center;
