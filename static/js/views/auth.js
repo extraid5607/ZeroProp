@@ -2,6 +2,7 @@
 import { api } from '../api.js';
 import { h, mount, price, pct, tone, arrow } from '../util.js';
 import { store, on } from '../store.js';
+import { openInstallDialog } from '../dialogs.js';
 
 const STRIP = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XAUUSD', 'EURUSD', 'USDJPY'];
 
@@ -92,6 +93,15 @@ export function renderAuth(root, onAuthed) {
   }
   unsub.push(on('prices', paintStrip));
 
+  const authInstallBtn = h('button', {
+    type: 'button', class: 'btn sm btn-pwa-install',
+    on: { click: () => openInstallDialog({ deferredPrompt: window.__zp_install_prompt }) },
+  });
+  authInstallBtn.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Download App</span>';
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+    authInstallBtn.style.display = 'none';
+  }
+
   mount(root,
     h('div', { class: 'auth' },
       h('div', { class: 'auth-brand' },
@@ -99,7 +109,8 @@ export function renderAuth(root, onAuthed) {
           h('img', { src: '/img/logo.svg', alt: '', class: 'brand-logo', width: '34', height: '34' }),
           h('span', { class: 'brand-text' },
             h('span', { class: 'brand-zero' }, 'Zero'),
-            h('span', { class: 'brand-prop' }, 'Prop')))),
+            h('span', { class: 'brand-prop' }, 'Prop'))),
+        authInstallBtn),
       h('div', { class: 'auth-intro' },
         h('h1', null, 'Learn to trade with pretend money'),
         h('p', { class: 'auth-lead' }, 'Start with $10,000. Trade crypto, forex, gold and silver on live prices, and find out what a trade would really have cost you before it costs you anything.'),

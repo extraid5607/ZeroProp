@@ -11,6 +11,7 @@ import { renderJournal } from './views/journal.js';
 import { renderStats } from './views/stats.js';
 import { renderRules } from './views/rules.js';
 import { renderLeaderboard } from './views/leaderboard.js';
+import { openInstallDialog } from './dialogs.js';
 
 const ROUTES = [
   ['trade', 'Trade', renderTrade],
@@ -122,6 +123,32 @@ function endSession(message) {
   if (message) toast(message, 'info');
 }
 
+let deferredInstallPrompt = null;
+let installBtn = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  window.__zp_install_prompt = e;
+  updateInstallButton();
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  window.__zp_install_prompt = null;
+  updateInstallButton();
+  toast('ZeroProp App installed successfully!', 'ok');
+});
+
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function updateInstallButton() {
+  if (!installBtn) return;
+  installBtn.style.display = isStandalone() ? 'none' : 'inline-flex';
+}
+
 function renderLoggedIn() {
   stopView();
   const main = h('main', { id: 'main', tabindex: '-1' });
@@ -130,6 +157,15 @@ function renderLoggedIn() {
   themeBtn = h('button', { type: 'button', class: 'btn ghost sm btn-icon', on: { click: toggleTheme } });
   const logoutBtn = h('button', { type: 'button', class: 'btn ghost sm btn-icon', on: { click: logout }, title: 'Log out', 'aria-label': 'Log out' });
   logoutBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span class="hide-sm">Log out</span>';
+  
+  installBtn = h('button', {
+    type: 'button', class: 'btn sm btn-pwa-install install-app-btn',
+    title: 'Download ZeroProp App', 'aria-label': 'Download ZeroProp App',
+    on: { click: () => openInstallDialog({ deferredPrompt: deferredInstallPrompt }) },
+  });
+  installBtn.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span class="hide-xs">Download App</span>';
+  updateInstallButton();
+
   const banner = h('div', { class: 'banner', role: 'note' });
   const top = h('header', { class: 'topbar' },
     h('a', { class: 'brand', href: '#/trade' },
@@ -139,6 +175,7 @@ function renderLoggedIn() {
         h('span', { class: 'brand-prop' }, 'Prop'))),
     nav, acct,
     h('div', { class: 'topbar-tools' },
+      installBtn,
       h('span', { class: 'badge accent hide-sm', title: 'Signed in as' }, store.me.user.username),
       themeBtn, logoutBtn));
   mount(root, top, store.me.demo ? banner : null, main);

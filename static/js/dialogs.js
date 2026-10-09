@@ -158,3 +158,66 @@ export function openJournalDialog(trade, onSaved) {
   });
   openDialog(dlg);
 }
+
+// ---------------------------------------------------------------- PWA install guide
+export function openInstallDialog({ deferredPrompt } = {}) {
+  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const id = `dlg-${++seq}`;
+
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        toast('Installing ZeroProp App…', 'ok');
+      }
+    });
+    return;
+  }
+
+  const content = [];
+  if (isStandalone) {
+    content.push(
+      h('div', { class: 'dlg-install-success' },
+        h('span', { style: { fontSize: '28px' } }, '🎉'),
+        h('p', { style: { fontWeight: '600', fontSize: '15px' } }, 'ZeroProp is already installed!'),
+        h('p', { class: 'muted' }, 'You are running the standalone application.'))
+    );
+  } else if (isIos) {
+    content.push(
+      h('div', { class: 'dlg-install-steps' },
+        h('p', null, 'Install ZeroProp on your iPhone or iPad in 3 simple steps:'),
+        h('div', { class: 'install-step' },
+          h('span', { class: 'step-num' }, '1'),
+          h('div', null, h('strong', null, 'Tap Share'), h('p', { class: 'muted' }, 'Tap the Share icon at the bottom of Safari (square with arrow pointing up).'))),
+        h('div', { class: 'install-step' },
+          h('span', { class: 'step-num' }, '2'),
+          h('div', null, h('strong', null, 'Add to Home Screen'), h('p', { class: 'muted' }, 'Scroll down in the share sheet and tap "Add to Home Screen" (➕).'))),
+        h('div', { class: 'install-step' },
+          h('span', { class: 'step-num' }, '3'),
+          h('div', null, h('strong', null, 'Confirm Install'), h('p', { class: 'muted' }, 'Tap "Add" in the top-right corner. ZeroProp will appear on your home screen like a native app!'))))
+    );
+  } else {
+    content.push(
+      h('div', { class: 'dlg-install-steps' },
+        h('p', null, 'Install ZeroProp as a Progressive Web App (PWA) for 1-click access and fullscreen trading:'),
+        h('div', { class: 'install-step' },
+          h('span', { class: 'step-num' }, '1'),
+          h('div', null, h('strong', null, 'Browser Address Bar'), h('p', { class: 'muted' }, 'Click the Install icon (💻 / 📲) in the right side of your browser address bar.'))),
+        h('div', { class: 'install-step' },
+          h('span', { class: 'step-num' }, '2'),
+          h('div', null, h('strong', null, 'Or Browser Menu'), h('p', { class: 'muted' }, 'Click the menu (⋮ or ⋯) in your browser and select "Install ZeroProp".'))))
+    );
+  }
+
+  const dlg = h('dialog', { 'aria-labelledby': id, class: 'dlg-install' },
+    h('div', { class: 'dlg-head' },
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
+        h('img', { src: '/img/logo.svg', width: '28', height: '28', alt: '' }),
+        h('h2', { id }, 'Download ZeroProp App'))),
+    h('div', { class: 'dlg-body' }, content),
+    h('div', { class: 'dlg-foot' },
+      h('button', { type: 'button', class: 'btn primary', on: { click: () => dlg.close() } }, 'Got it')));
+
+  openDialog(dlg);
+}

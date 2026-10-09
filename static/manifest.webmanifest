@@ -1,0 +1,67 @@
+{
+  "name": "ZeroProp: Trading Simulator",
+  "short_name": "ZeroProp",
+  "description": "Professional simulated trading evaluation and training platform with live crypto, commodities, and forex markets.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a111f",
+  "theme_color": "#101a2d",
+  "categories": ["finance", "business", "utilities"],
+  "icons": [
+    {
+      "src": "/img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/img/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live Trade",
+      "short_name": "Trade",
+      "description": "Open live market charts and order ticket",
+      "url": "/#trade",
+      "icons": [{ "src": "/img/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Trading Journal",
+      "short_name": "Journal",
+      "description": "Review trade history and execution tags",
+      "url": "/#journal",
+      "icons": [{ "src": "/img/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Account Stats",
+      "short_name": "Stats",
+      "description": "Inspect win rate, payoff ratio, and equity curve",
+      "url": "/#stats",
+      "icons": [{ "src": "/img/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
