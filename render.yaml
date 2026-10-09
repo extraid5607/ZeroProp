@@ -1,0 +1,22 @@
+# Render Blueprint: one web service. Create a PostgreSQL database on Render separately and paste
+# its "Internal Database URL" into DATABASE_URL (see README, "Deploy on Render").
+services:
+  - type: web
+    name: zeroprop
+    runtime: python
+    region: frankfurt            # some exchanges block US servers; the price feed also fails over by itself
+    buildCommand: pip install -r requirements.txt
+    # ONE worker only: the price feed, order engine and rate limiters live in this process.
+    # --forwarded-allow-ips lets the app see each visitor's real IP behind Render's proxy
+    # (needed for the login and sign-up rate limits to work per visitor).
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_NAME
+        value: ZeroProp
+      - key: PRICE_SOURCE
+        value: live
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: DATABASE_URL
+        sync: false              # paste the PostgreSQL URL in the Render dashboard
