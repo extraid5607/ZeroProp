@@ -38,6 +38,7 @@ from .stats import compute_stats
 log = logging.getLogger("zeropaper")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
+BOOT_TIME = time.time()
 COOKIE = "zp_session"
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
@@ -257,7 +258,17 @@ async def candles(symbol: str = Query(max_length=16), tf: str = "15m", limit: in
     return {"symbol": symbol, "tf": tf, "candles": rows}
 
 
-@app.get("/api/health")
+@app.api_route("/ping", methods=["GET", "HEAD"])
+def ping():
+    return {"status": "ok", "uptime_sec": round(time.time() - BOOT_TIME, 1)}
+
+
+@app.api_route("/healthz", methods=["GET", "HEAD"])
+def healthz():
+    return {"status": "ok"}
+
+
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 def health():
     return {"ok": True, "price_source": settings.price_source, "feeds": hub.status()}
 
