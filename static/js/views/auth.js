@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { h, mount, price, pct, tone, arrow } from '../util.js';
 import { store, on } from '../store.js';
 import { openInstallDialog } from '../dialogs.js';
+import { openLegalDialog } from '../legal.js';
 
 const STRIP = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XAUUSD', 'EURUSD', 'USDJPY'];
 
@@ -131,7 +132,21 @@ export function renderAuth(root, onAuthed) {
           h('p', { class: 'fine' }, 'Example numbers. 1R is what you lose if the stop is hit, fees included. At 20× leverage, liquidation is more than four times further away than the stop.'))),
       h('section', { class: 'panel auth-card', 'aria-label': 'Log in or create an account' }, modeSeg, form)),
     strip,
-    h('p', { class: 'disclaimer' }, 'ZeroProp uses simulated funds on real-time market data for educational and evaluation purposes. It does not provide financial advice.'));
+    h('div', { class: 'auth-legal-footer', style: { textAlign: 'center', padding: '0 20px 40px' } },
+      h('p', { class: 'disclaimer', style: { padding: '0 0 8px', margin: 0 } },
+        'ZeroProp uses simulated funds on real-time market data for educational and evaluation purposes. It does not provide financial advice.'),
+      h('div', { class: 'auth-legal-links' },
+        h('button', { type: 'button', on: { click: () => openLegalDialog('about') } }, 'About ZeroProp'),
+        h('span', { style: { color: 'var(--line)' } }, '·'),
+        h('button', { type: 'button', on: { click: () => openLegalDialog('disclaimer') } }, 'Disclaimer & Risk'),
+        h('span', { style: { color: 'var(--line)' } }, '·'),
+        h('button', { type: 'button', on: { click: () => openLegalDialog('privacy') } }, 'Privacy Policy'),
+        h('span', { style: { color: 'var(--line)' } }, '·'),
+        h('button', { type: 'button', on: { click: () => openLegalDialog('terms') } }, 'Terms of Service'),
+        h('span', { style: { color: 'var(--line)' } }, '·'),
+        h('button', { type: 'button', on: { click: () => openLegalDialog('refund') } }, 'Refund Policy'),
+        h('span', { style: { color: 'var(--line)' } }, '·'),
+        h('button', { type: 'button', on: { click: () => openLegalDialog('contact') } }, 'Contact & Support'))));
 
   drawMode();
   paintStrip();

@@ -545,3 +545,6 @@ export function openUpgradeDialog({ defaultPlanId = '10k', onComplete } = {}) {
   openDialog(dlg);
 }
 
+export { openLegalDialog } from './legal.js';
+
+

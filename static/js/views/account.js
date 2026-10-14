@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { h, mount, money, pct, tone, arrow, toast, storage } from '../util.js';
 import { store, on, setAccount, refreshAccount } from '../store.js';
 import { openUpgradeDialog, openInstallDialog } from '../dialogs.js';
+import { renderLegalSection } from '../legal.js';
 
 export function renderAccount(root) {
   const unsub = [];
@@ -22,7 +23,9 @@ export function renderAccount(root) {
   function renderContent() {
     const user = store.me?.user;
     if (!user) {
-      mount(bodyEl, h('div', { class: 'panel empty' }, h('strong', null, 'Not signed in'), 'Please log in to view account.'));
+      mount(bodyEl,
+        h('div', { class: 'panel empty' }, h('strong', null, 'Not signed in'), 'Please log in to view account.'),
+        renderLegalSection('about'));
       return;
     }
 
@@ -156,7 +159,10 @@ export function renderAccount(root) {
           h('button', {
             type: 'button', class: 'btn ghost',
             on: { click: handleLogout },
-          }, 'Log out of ZeroProp'))));
+          }, 'Log out of ZeroProp'))),
+
+      // Company, Legal & Commercial Documentation Section
+      renderLegalSection('about'));
   }
 
   unsub.push(on('account', renderContent));
