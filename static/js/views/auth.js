@@ -52,7 +52,7 @@ export function renderAuth(root, onAuthed) {
       type: 'button', class: 'seg-btn', 'aria-pressed': String(v === mode),
       on: { click: () => { mode = v; err.textContent = ''; drawMode(); } },
     }, t)));
-    submit.textContent = mode === 'login' ? 'Log in' : 'Create account and start with $10,000';
+    submit.textContent = mode === 'login' ? 'Log in' : 'Create account and start with $2,000';
     password.setAttribute('autocomplete', mode === 'login' ? 'current-password' : 'new-password');
     hintUser.textContent = mode === 'register' ? '3 to 20 letters, numbers or underscores. This is your name on the leaderboard.' : '';
     hintPass.textContent = mode === 'register' ? 'At least 8 characters. There is no email, so there is no password reset: keep it safe.' : '';
@@ -102,18 +102,24 @@ export function renderAuth(root, onAuthed) {
     authInstallBtn.style.display = 'none';
   }
 
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light' ||
+    (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: light)').matches);
+  const logoSrc = isLight ? '/img/logo-light.svg' : '/img/logo.svg';
+
   mount(root,
     h('div', { class: 'auth' },
       h('div', { class: 'auth-brand' },
         h('span', { class: 'brand' },
-          h('img', { src: '/img/logo.svg', alt: '', class: 'brand-logo', width: '34', height: '34' }),
-          h('span', { class: 'brand-text' },
-            h('span', { class: 'brand-zero' }, 'Zero'),
-            h('span', { class: 'brand-prop' }, 'Prop'))),
+          h('img', { src: logoSrc, alt: 'ZeroProp', class: 'brand-logo', width: '38', height: '38' }),
+          h('div', { class: 'brand-col' },
+            h('span', { class: 'brand-text' },
+              h('span', { class: 'brand-zero' }, 'ZERO'),
+              h('span', { class: 'brand-prop' }, 'PROP')),
+            h('span', { class: 'brand-tagline' }, 'ZERO RISK. REAL SKILL.'))),
         authInstallBtn),
       h('div', { class: 'auth-intro' },
         h('h1', null, 'Learn to trade with pretend money'),
-        h('p', { class: 'auth-lead' }, 'Start with $10,000. Trade crypto, forex, gold and silver on live prices, and find out what a trade would really have cost you before it costs you anything.'),
+        h('p', { class: 'auth-lead' }, 'Start with $2,000 free evaluation funds. Trade crypto, commodities and forex on live prices, and find out what a trade would really have cost you before it costs you anything.'),
         h('ul', { class: 'auth-points' },
           h('li', null, h('strong', null, 'See your risk before you click. '), 'Set a stop-loss and the order panel shows your position size, liquidation price and reward, all measured in R.'),
           h('li', null, h('strong', null, 'Keep a journal. '), 'Note why you took each trade and how you felt, then see which setups and moods make or lose money.'),

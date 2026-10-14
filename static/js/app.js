@@ -76,7 +76,15 @@ function toggleTheme() {
   document.documentElement.setAttribute('data-theme', next);
   storage('zp_theme', next);
   drawThemeButton();
+  updateLogoTheme();
   if (shell) showRoute(false);   // charts read their colours when created, so redraw the page
+}
+
+function updateLogoTheme() {
+  const isLight = effectiveTheme() === 'light';
+  document.querySelectorAll('.brand-logo').forEach((img) => {
+    img.src = isLight ? '/img/logo-light.svg' : '/img/logo.svg';
+  });
 }
 
 let themeBtn = null;
@@ -183,12 +191,18 @@ function renderLoggedIn() {
   updateInstallButton();
 
   const banner = h('div', { class: 'banner', role: 'note' });
+  const isLight = effectiveTheme() === 'light';
+  const logoSrc = isLight ? '/img/logo-light.svg' : '/img/logo.svg';
+  const brandLogo = h('img', { src: logoSrc, alt: 'ZeroProp', class: 'brand-logo', width: '32', height: '32' });
+
   const top = h('header', { class: 'topbar' },
     h('a', { class: 'brand', href: '#/trade' },
-      h('img', { src: '/img/logo.svg', alt: '', class: 'brand-logo', width: '30', height: '30' }),
-      h('span', { class: 'brand-text' },
-        h('span', { class: 'brand-zero' }, 'Zero'),
-        h('span', { class: 'brand-prop' }, 'Prop'))),
+      brandLogo,
+      h('div', { class: 'brand-col' },
+        h('span', { class: 'brand-text' },
+          h('span', { class: 'brand-zero' }, 'ZERO'),
+          h('span', { class: 'brand-prop' }, 'PROP')),
+        h('span', { class: 'brand-tagline' }, 'ZERO RISK. REAL SKILL.'))),
     nav, acct,
     h('div', { class: 'topbar-tools' },
       installBtn,

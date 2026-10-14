@@ -68,7 +68,10 @@ def db(fresh_db):
 @pytest.fixture()
 def user(db):
     from app import auth
-    return auth.create_user(db, "tester", "correct horse battery", "2000-01-01")
+    u = auth.create_user(db, "tester", "correct horse battery", "2000-01-01")
+    u.cash = 10_000.0
+    db.commit()
+    return u
 
 
 def order(**kw):

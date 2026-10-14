@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 114 132" width="114" height="132" fill="none">
+  <defs>
+    <!-- Facet 1: Sky Blue -->
+    <linearGradient id="facet-sky-l" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#2CA5EC" />
+    </linearGradient>
+    <!-- Facet 2: Royal Blue -->
+    <linearGradient id="facet-royal-l" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2357D6" />
+      <stop offset="100%" stop-color="#1E47BE" />
+    </linearGradient>
+  </defs>
+
+  <!-- Hexagon Top-Left Half (Sky Blue) -->
+  <path d="M57 0 L114 33 L0 99 L0 33 Z" fill="url(#facet-sky-l)" />
+
+  <!-- Hexagon Bottom-Right Half (Royal Blue) -->
+  <path d="M114 33 L114 99 L57 132 L0 99 Z" fill="url(#facet-royal-l)" />
+
+  <!-- Center '0' Ring (White matching light theme) -->
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M57 23 C75.2 23 90 42.2 90 66 C90 89.8 75.2 109 57 109 C38.8 109 24 89.8 24 66 C24 42.2 38.8 23 57 23 Z M57 34 C44.5 34 34.5 48.3 34.5 66 C34.5 83.7 44.5 98 57 98 C69.5 98 79.5 83.7 79.5 66 C79.5 48.3 69.5 34 57 34 Z" fill="#FFFFFF" />
+</svg>

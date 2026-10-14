@@ -226,7 +226,7 @@ def test_reset_closes_everything_and_starts_new_season(engine, hub, db, user):
     engine.reset_account(db, user)
     st = engine.state(db, user)
     assert st["positions"] == [] and st["orders"] == []
-    assert approx(st["equity"], 10_000) and user.season == 2
+    assert approx(st["equity"], 2_000) and user.season == 2
 
 
 def test_leaderboard_ranks_by_return(engine, hub, db, user):
