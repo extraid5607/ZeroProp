@@ -3,9 +3,9 @@ import { api } from '../api.js';
 import { h, mount, num, money, pct, rMult, tone, arrow, duration, dateTime } from '../util.js';
 import { store, on, market } from '../store.js';
 import { createEquityChart } from '../chart.js';
-import { REASONS } from '../dialogs.js';
+import { REASONS, openUpgradeDialog } from '../dialogs.js';
 
-const PERIODS = [['all', 'All time'], ['30d', 'Last 30 days'], ['7d', 'Last 7 days']];
+const ALL_PERIODS = [['3d', 'Last 3 days'], ['7d', 'Last 7 days'], ['30d', 'Last 30 days'], ['all', 'All time']];
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const CLASS_NAMES = { crypto: 'Crypto', metal: 'Commodities', forex: 'Forex' };
 
@@ -34,7 +34,8 @@ export function insights(s) {
 }
 
 export function renderStats(root) {
-  let period = 'all';
+  const isPaidInitial = Boolean(store.me?.user?.is_paid || (store.me?.user?.plan_name && store.me.user.plan_name !== 'free'));
+  let period = isPaidInitial ? 'all' : '3d';
   let data = null;
   let failed = '';
   let chart = null;
@@ -43,15 +44,32 @@ export function renderStats(root) {
   const unsub = [];
 
   const body = h('div');
-  const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Period', style: { maxWidth: '360px' } });
+  const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Period', style: { maxWidth: '420px' } });
   mount(root, h('div', { class: 'page' },
     h('div', { class: 'page-head' }, h('h1', null, 'Stats'), seg), body));
 
   function drawSeg() {
-    mount(seg, PERIODS.map(([v, label]) => h('button', {
-      type: 'button', class: 'seg-btn', 'aria-pressed': String(v === period),
-      on: { click: () => { if (v !== period) { period = v; drawSeg(); load(); } } },
-    }, label)));
+    const isPaid = Boolean(data?.is_paid ?? (store.me?.user?.is_paid || (store.me?.user?.plan_name && store.me.user.plan_name !== 'free')));
+    mount(seg, ALL_PERIODS.map(([v, label]) => {
+      const isLocked = !isPaid && v !== '3d';
+      return h('button', {
+        type: 'button',
+        class: `seg-btn ${isLocked ? 'pro-locked' : ''}`,
+        'aria-pressed': String(v === period),
+        title: isLocked ? 'Full historical curve is a Paid feature (Free plans show 3 days of chart history)' : label,
+        on: {
+          click: () => {
+            if (v !== period) {
+              period = v;
+              drawSeg();
+              load();
+            }
+          },
+        },
+      },
+        label,
+        isLocked ? h('span', { class: 'lock-mini' }, ' 🔒') : null);
+    }));
   }
 
   function tile(label, value, sub, cls = '') {
@@ -105,9 +123,31 @@ export function renderStats(root) {
       tile('Longest streaks', `${s.longest_win_streak} / ${s.longest_loss_streak}`, `Wins / losses. ${streak}`),
       tile('Typical swing', `${pct(s.avg_mfe_pct)} / ${pct(s.avg_mae_pct)}`, 'Price moved this much for / against you while a trade was open'));
 
+    const isPaid = Boolean(s.is_paid ?? (store.me?.user?.is_paid || (store.me?.user?.plan_name && store.me.user.plan_name !== 'free')));
+
+    const statusBadge = isPaid
+      ? h('span', { class: 'equity-badge-pro' }, '✓ PRO Graph (Unlimited)')
+      : h('span', { class: 'equity-badge-free' }, '⚡ 3-Day Free Graph');
+
+    const upgradeBanner = (!isPaid) ? h('div', { class: 'equity-upgrade-banner' },
+      h('div', { class: 'equity-upgrade-left' },
+        h('span', { class: 'equity-upgrade-icon' }, '🔒'),
+        h('div', { class: 'equity-upgrade-text' },
+          h('strong', null, 'Full Historical Equity Graph is a Paid Feature'),
+          h('span', null, period === '3d'
+            ? 'Free evaluation accounts include the last 3 days of chart history. Upgrade to a paid plan ($10,000+) to unlock 7d, 30d, and all-time equity curves.'
+            : 'Historical trading metrics are displayed below. Chart data is limited to the last 3 days on Free plans. Upgrade for unlimited historical curves.'))),
+      h('button', {
+        type: 'button', class: 'btn primary sm',
+        on: { click: () => openUpgradeDialog() },
+      }, 'Upgrade Plan ↗')) : null;
+
     const read = h('div', { class: 'eq-read' });
     const box = h('div', { class: 'eq-box' });
-    const showLatest = () => mount(read, h('strong', null, money(endEq)), h('span', { class: tone(change) }, `${arrow(change)} ${pct(change, { sign: true })} over this period`.trim()), h('span', { class: 'muted' }, 'Hover the chart to see any point in time'));
+    const showLatest = () => mount(read,
+      h('strong', null, money(endEq)),
+      h('span', { class: tone(change) }, `${arrow(change)} ${pct(change, { sign: true })} over this period`.trim()),
+      h('span', { class: 'muted' }, !isPaid ? 'Showing last 3 days of chart history' : 'Hover the chart to see any point in time'));
     showLatest();
 
     const tips = insights(s);
@@ -116,7 +156,13 @@ export function renderStats(root) {
 
     mount(body,
       h('section', { class: 'panel', style: { marginBottom: '14px', overflow: 'hidden' } },
-        h('div', { class: 'panel-pad', style: { paddingBottom: 0 } }, h('h2', null, 'Equity')), read, box),
+        h('div', { class: 'panel-pad', style: { paddingBottom: '4px' } },
+          h('div', { class: 'equity-head-row' },
+            h('h2', { style: { margin: 0 } }, 'Equity Curve'),
+            statusBadge)),
+        read,
+        upgradeBanner,
+        box),
       kpis,
       tips.length ? h('section', { class: 'panel insights' }, h('h2', null, 'Worth a look'), h('ul', { class: 'explain' }, tips.map((t) => h('li', null, t)))) : null,
       h('div', { class: 'breakdowns' },
@@ -129,7 +175,8 @@ export function renderStats(root) {
         breakdown('Day you opened', weekdays, (k) => k, '')));
 
     if (window.LightweightCharts && curve.length > 1) {
-      chart = createEquityChart(box, curve, period === 'all' ? store.me.user.start_balance : startEq);
+      const baseline = (isPaid && period === 'all') ? store.me.user.start_balance : startEq;
+      chart = createEquityChart(box, curve, baseline);
       chart.onHover((p) => {
         if (!p) { showLatest(); return; }
         const delta = p.value - startEq;

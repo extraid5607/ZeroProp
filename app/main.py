@@ -154,6 +154,8 @@ def current_user(user: User | None = Depends(optional_user)) -> User:
 
 def _user_view(u: User) -> dict:
     is_adm = bool(u.is_admin or (u.username and u.username.lower() == settings.admin_user.lower()))
+    now = time.time()
+    is_paid = bool(is_adm or (u.plan_name and u.plan_name != "free" and (u.plan_expires_at is None or u.plan_expires_at > now)))
     return {
         "username": u.username,
         "season": u.season,
@@ -161,6 +163,7 @@ def _user_view(u: User) -> dict:
         "plan_name": u.plan_name or "free",
         "plan_expires_at": u.plan_expires_at,
         "is_admin": is_adm,
+        "is_paid": is_paid,
         "settings": {
             "require_sl": u.require_sl,
             "max_leverage": u.max_leverage,
@@ -339,11 +342,15 @@ def journal(trade_id: int, body: JournalReq, user: User = Depends(current_user),
 
 
 @app.get("/api/stats")
-def stats(period: str = Query("all", pattern="^(all|7d|30d)$"),
+def stats(period: str = Query("all", pattern="^(all|30d|7d|3d)$"),
           user: User = Depends(current_user), db: Session = Depends(get_db)):
+    now = time.time()
+    is_adm = bool(user.is_admin or (user.username and user.username.lower() == settings.admin_user.lower()))
+    is_paid = bool(is_adm or (user.plan_name and user.plan_name != "free" and (user.plan_expires_at is None or user.plan_expires_at > now)))
+
     cutoff = None
     if period != "all":
-        cutoff = time.time() - {"7d": 7, "30d": 30}[period] * 86400
+        cutoff = now - {"3d": 3, "7d": 7, "30d": 30}[period] * 86400
     q = select(Trade).where(Trade.user_id == user.id, Trade.season == user.season,
                             Trade.status == "closed")
     s = select(Snapshot).where(Snapshot.user_id == user.id, Snapshot.season == user.season)
@@ -354,8 +361,21 @@ def stats(period: str = Query("all", pattern="^(all|7d|30d)$"),
     snaps = [(x.ts, x.equity) for x in db.scalars(s.order_by(Snapshot.ts))]
     # Always end the curve at "now", so it matches the equity shown in the header.
     with LOCK:
-        snaps.append((time.time(), engine.equity(db, user)))
-    return compute_stats(closed, snaps, user.start_balance)
+        snaps.append((now, engine.equity(db, user)))
+    res = compute_stats(closed, snaps, user.start_balance)
+    res["is_paid"] = is_paid
+
+    # Enforce: non-paid users only see up to 3 days back on the equity graph
+    if not is_paid:
+        three_days_ago = now - 3 * 86400
+        res["equity_curve"] = [pt for pt in res.get("equity_curve", []) if pt[0] >= three_days_ago]
+        res["graph_limited"] = True
+        res["graph_days_allowed"] = 3
+    else:
+        res["graph_limited"] = False
+        res["graph_days_allowed"] = None
+
+    return res
 
 
 @app.get("/api/risk/size")
