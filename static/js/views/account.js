@@ -9,6 +9,7 @@ export function renderAccount(root) {
   const unsub = [];
 
   const bodyEl = h('div', { class: 'account-body' });
+  const legalEl = renderLegalSection();
   let pendingPayment = null;
 
   async function loadPending() {
@@ -25,7 +26,7 @@ export function renderAccount(root) {
     if (!user) {
       mount(bodyEl,
         h('div', { class: 'panel empty' }, h('strong', null, 'Not signed in'), 'Please log in to view account.'),
-        renderLegalSection('about'));
+        legalEl);
       return;
     }
 
@@ -161,8 +162,8 @@ export function renderAccount(root) {
             on: { click: handleLogout },
           }, 'Log out of ZeroProp'))),
 
-      // Company, Legal & Commercial Documentation Section
-      renderLegalSection('about'));
+      // Company, Legal & Commercial Documentation Section (Collapsed by default, opens on click)
+      legalEl);
   }
 
   unsub.push(on('account', renderContent));

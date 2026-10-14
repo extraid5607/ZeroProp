@@ -2171,13 +2171,88 @@ dialog.dlg-upgrade {
 /* ------------------------------------------------------------------ Legal & Commercial Policies */
 .legal-section-container {
   margin-top: 18px;
-  padding: 20px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* Accordion Trigger for Collapsed State */
+.legal-accordion-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.legal-accordion-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.legal-accordion-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+}
+
+.legal-accordion-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.legal-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 650;
+  padding: 8px 16px;
+  border-radius: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.legal-accordion-trigger:hover .legal-open-btn {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 2px 10px rgba(56, 189, 248, 0.3);
+}
+
+@media (max-width: 640px) {
+  .legal-accordion-left {
+    gap: 10px;
+  }
+  .legal-accordion-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+  .legal-open-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
 }
 
 .legal-section-top {

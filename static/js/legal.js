@@ -47,6 +47,10 @@ export const LEGAL_SECTIONS = [
   },
 ];
 
+// Persistent UI state across live account ticks & re-renders
+let persistentLegalTab = 'about';
+let persistentLegalOpen = false; // Collapsed by default: only open when user clicks on it
+
 export function getLegalContent(id) {
   switch (id) {
     case 'about':
@@ -150,7 +154,8 @@ export function getLegalContent(id) {
 
         h('h4', { class: 'legal-subhead' }, '5. Data Retention & Deletion'),
         h('p', null,
-          'You may request the permanent deletion of your account and associated trading journal data at any time by contacting the admin support desk.'));
+          'You may request the permanent deletion of your account and associated trading journal data at any time by contacting our support desk at ',
+          h('a', { href: 'mailto:Zerobossai@gmail.com', class: 'contact-link' }, 'Zerobossai@gmail.com'), '.'));
 
     case 'terms':
       return h('div', { class: 'legal-article' },
@@ -221,7 +226,9 @@ export function getLegalContent(id) {
         h('h4', { class: 'legal-subhead' }, '4. Refund Processing Window'),
         h('p', null,
           'Approved refunds are returned directly to the originating UPI Virtual Payment Address (VPA) / Bank Account within 5 to 7 business days. ' +
-          'To request a refund review, contact our support desk with your username, payment date, and 12-digit UTR number.'));
+          'To request a refund review, contact our support desk at ',
+          h('a', { href: 'mailto:Zerobossai@gmail.com', class: 'contact-link' }, 'Zerobossai@gmail.com'),
+          ' with your username, payment date, and 12-digit UTR number.'));
 
     case 'contact':
       return h('div', { class: 'legal-article' },
@@ -238,7 +245,7 @@ export function getLegalContent(id) {
             h('div', { class: 'contact-icon' }, '✉️'),
             h('h4', null, 'Email Support'),
             h('p', { class: 'muted-xs' }, 'For general inquiries, account management & corporate matters:'),
-            h('a', { href: 'mailto:support@zeroprop.com', class: 'contact-link' }, 'support@zeroprop.com')),
+            h('a', { href: 'mailto:Zerobossai@gmail.com', class: 'contact-link' }, 'Zerobossai@gmail.com')),
           h('div', { class: 'legal-contact-card' },
             h('div', { class: 'contact-icon' }, '💳'),
             h('h4', null, 'UPI Payment & UTR Desk'),
@@ -258,7 +265,10 @@ export function getLegalContent(id) {
 
         h('div', { class: 'legal-callout info' },
           h('strong', null, 'Verification Assistance: '),
-          h('span', null, 'If you submitted a UPI UTR and your account has not upgraded within 2 hours, please email support or message the admin desk with your username and UTR number.')));
+          h('span', null,
+            'If you submitted a UPI UTR and your account has not upgraded within 2 hours, please email ',
+            h('strong', null, 'Zerobossai@gmail.com'),
+            ' with your username and UTR number.')));
 
     default:
       return h('div', { class: 'legal-article' }, h('p', null, 'Select a policy from the tabs above.'));
@@ -266,53 +276,110 @@ export function getLegalContent(id) {
 }
 
 /**
- * Renders the complete, interactive legal & commercial documentation section for the Account page.
+ * Renders the collapsible legal & commercial documentation section for the Account page.
+ * Only opens when user clicks on it; remembers active tab across account re-renders.
  */
-export function renderLegalSection(activeTabId = 'about') {
-  let currentTab = activeTabId;
+export function renderLegalSection(activeTabId = null) {
+  if (activeTabId) persistentLegalTab = activeTabId;
   const container = h('section', { class: 'panel legal-section-container', id: 'company-legal' });
 
   function draw() {
+    if (!persistentLegalOpen) {
+      // Collapsed View: compact summary accordion bar
+      mount(container,
+        h('div', {
+          class: 'legal-accordion-trigger',
+          role: 'button',
+          tabindex: '0',
+          'aria-expanded': 'false',
+          on: {
+            click: () => {
+              persistentLegalOpen = true;
+              draw();
+            },
+            keydown: (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                persistentLegalOpen = true;
+                draw();
+              }
+            },
+          },
+        },
+          h('div', { class: 'legal-accordion-left' },
+            h('span', { class: 'legal-accordion-icon' }, '⚖️'),
+            h('div', null,
+              h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } },
+                h('h3', { style: { margin: 0, fontSize: '15.5px', fontWeight: '700' } }, 'Company, Legal & Regulatory Policies'),
+                h('span', { class: 'badge' }, 'Compliance & Trust')),
+              h('p', { class: 'muted', style: { margin: '3px 0 0', fontSize: '12.5px' } },
+                'Official Disclaimer · Risk Warning · Privacy Policy · Terms of Service · Refund Policy · Support Desk'))),
+          h('div', { class: 'legal-accordion-right' },
+            h('span', { class: 'legal-open-btn' },
+              'View Policies',
+              h('svg', { viewBox: '0 0 24 24', width: '14', height: '14', fill: 'none', stroke: 'currentColor', 'stroke-width': '2.5' },
+                h('polyline', { points: '6 9 12 15 18 9' }))))));
+      return;
+    }
+
+    // Expanded View: full interactive tabs and policy reader
+    const viewportEl = h('div', { class: 'legal-content-viewport' });
+    mount(viewportEl, getLegalContent(persistentLegalTab));
+
     const navButtons = LEGAL_SECTIONS.map((sec) =>
       h('button', {
         type: 'button',
-        class: `legal-tab-btn ${sec.id === currentTab ? 'active' : ''}`,
-        'aria-selected': String(sec.id === currentTab),
+        class: `legal-tab-btn ${sec.id === persistentLegalTab ? 'active' : ''}`,
+        'aria-selected': String(sec.id === persistentLegalTab),
         on: {
-          click: () => {
-            currentTab = sec.id;
-            draw();
+          click: (e) => {
+            e.stopPropagation();
+            persistentLegalTab = sec.id;
+            // Instantly update active class on tab buttons without full redraw
+            container.querySelectorAll('.legal-tab-btn').forEach((b, idx) => {
+              const matches = LEGAL_SECTIONS[idx].id === persistentLegalTab;
+              b.classList.toggle('active', matches);
+              b.setAttribute('aria-selected', String(matches));
+            });
+            // Mount new content cleanly in viewport
+            mount(viewportEl, getLegalContent(persistentLegalTab));
           },
         },
       },
         h('span', { class: 'legal-tab-icon' }, sec.icon),
         h('span', { class: 'legal-tab-label' }, sec.title)));
 
-    const activeMeta = LEGAL_SECTIONS.find((s) => s.id === currentTab) || LEGAL_SECTIONS[0];
-    const contentBody = getLegalContent(currentTab);
-
     mount(container,
-      // Section Header
+      // Section Header (Open state)
       h('div', { class: 'legal-section-top' },
         h('div', null,
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-            h('h2', { style: { margin: 0, fontSize: '18px' } }, 'Company & Legal Information'),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } },
+            h('h2', { style: { margin: 0, fontSize: '17px', fontWeight: '700' } }, 'Company & Legal Information'),
             h('span', { class: 'badge' }, 'Compliance & Trust')),
-          h('p', { class: 'muted', style: { margin: '4px 0 0', fontSize: '13px' } },
+          h('p', { class: 'muted', style: { margin: '4px 0 0', fontSize: '12.5px' } },
             'Official platform terms, simulated prop trading disclaimers, privacy policy, and commercial refund guidelines.')),
         h('div', { class: 'legal-top-actions' },
           h('button', {
             type: 'button',
             class: 'btn sm ghost',
-            on: { click: () => openLegalDialog(currentTab) },
-          }, 'Expand Fullscreen ↗'))),
+            on: { click: () => openLegalDialog(persistentLegalTab) },
+          }, 'Expand Fullscreen ↗'),
+          h('button', {
+            type: 'button',
+            class: 'btn sm',
+            on: {
+              click: () => {
+                persistentLegalOpen = false;
+                draw();
+              },
+            },
+          }, 'Hide Policies ▲'))),
 
       // Tab selector
       h('div', { class: 'legal-tabs-bar', role: 'tablist' }, navButtons),
 
       // Content viewer
-      h('div', { class: 'legal-content-viewport' },
-        contentBody),
+      viewportEl,
 
       // Section Footer
       h('div', { class: 'legal-section-foot' },
@@ -327,8 +394,8 @@ export function renderLegalSection(activeTabId = 'about') {
 /**
  * Opens a modal dialog with full-screen view of any legal section.
  */
-export function openLegalDialog(initialTab = 'about') {
-  let cur = initialTab;
+export function openLegalDialog(initialTab = null) {
+  let cur = initialTab || persistentLegalTab || 'about';
   const id = `dlg-legal-${Date.now()}`;
   const bodyEl = h('div', { class: 'legal-dialog-content' });
 
@@ -349,6 +416,7 @@ export function openLegalDialog(initialTab = 'about') {
           on: {
             click: (e) => {
               cur = s.id;
+              persistentLegalTab = cur; // sync tab state
               dlg.querySelectorAll('.dlg-tab-btn').forEach((b) => b.classList.remove('active'));
               e.currentTarget.classList.add('active');
               mount(bodyEl, getLegalContent(cur));
